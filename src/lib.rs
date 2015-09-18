@@ -4,10 +4,12 @@ use std::ops;
 pub mod layout;
 pub mod predefined;
 
+/// A 3x3 matrix. The data is stored in column-major.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Matrix(pub [[f32; 3]; 3]);
 
 impl Matrix {
+    /// Builds an identity matrix, in other words a matrix that has no effect.
     #[inline]
     pub fn identity() -> Matrix {
         Matrix([
@@ -17,6 +19,7 @@ impl Matrix {
         ])
     }
 
+    /// Builds a matrix that will rescale both width and height of a given factor.
     #[inline]
     pub fn scale(factor: f32) -> Matrix {
         Matrix([
@@ -26,6 +29,7 @@ impl Matrix {
         ])
     }
 
+    /// Builds a matrix that will multiply the width and height by a certain factor.
     #[inline]
     pub fn scale_wh(w: f32, h: f32) -> Matrix {
         Matrix([
@@ -35,6 +39,7 @@ impl Matrix {
         ])
     }
 
+    /// Builds a matrix that will translate the object.
     #[inline]
     pub fn translate(x: f32, y: f32) -> Matrix {
         Matrix([
@@ -76,28 +81,49 @@ impl From<[[f32; 3]; 3]> for Matrix {
     }
 }
 
+/// Represents a widget of the UI.
 pub trait Widget {
-    /// Returns the list of shapes that must be drawn to display this widget.
+    /// Returns the list of shapes that must be drawn to display this widget. The list must be
+    /// ordered from bottom to top.
+    ///
+    /// This function should use the matrix and viewport ratio previously set
+    /// with `set_dimensions`.
+    ///
+    /// The convention is that if passed an identity matrix the widget must fill the entire
+    /// viewport horizontally, vertically, or both.
     fn draw(&self) -> Vec<Shape>;
 
-    /// Stores the data required to draw a widget in the widget.
+    /// Stores the information required to draw a widget.
+    ///
+    /// The convention is that if passed an identity matrix the widget must fill the entire
+    /// viewport horizontally, vertically, or both.
+    ///
+    /// The viewport ratio is used for things that must not be skewed.
+    ///
+    /// The function returns a list of events to transmit to the parent.
     #[inline]
-    fn set_dimensions(&mut self, matrix: &Matrix, viewport_height_per_width: f32) -> Vec<Box<Event>> {
+    fn set_dimensions(&mut self, matrix: &Matrix, viewport_height_per_width: f32)
+                      -> Vec<Box<Event>>
+    {
         vec![]
     }
 
     /// Tells the widget where the cursor is located over it.
     ///
     /// By default uses the return value of `draw()`.
+    ///
+    /// The function returns a list of events to transmit to the parent.
     #[inline]
     fn set_cursor(&mut self, _: Option<[f32; 2]>) -> Vec<Box<Event>> {
         vec![]
     }
 }
 
+/// Trait describing an event.
 pub trait Event: Any {}
 impl<T> Event for T where T: Any {}
 
+/// A shape that can be drawn by any of the UI's components.
 #[derive(Clone, Debug)]
 pub enum Shape {
     Text {
@@ -116,6 +142,7 @@ impl Shape {
     }
 }
 
+/// Main struct of this library. Handles the UI as a whole.
 pub struct Ui<T: ?Sized> where T: Widget {
     viewport_height_per_width: f32,
     widget: T,
@@ -134,6 +161,9 @@ impl<T> Ui<T> where T: Widget {
 }
 
 impl<T: ?Sized> Ui<T> where T: Widget {
+    /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
+    /// other words, shapes at the start of the list can be obstructed by shapes further ahead
+    /// in the list).
     pub fn draw(&self) -> Vec<Shape> {
         self.widget.draw()
     }
@@ -148,7 +178,7 @@ impl<T: ?Sized> Ui<T> where T: Widget {
         &self.widget
     }
 
-    /// Returns a reference to the main widget stored in the object.
+    /// Returns a mutable reference to the main widget stored in the object.
     #[inline]
     pub fn widget_mut(&mut self) -> &mut T {
         &mut self.widget

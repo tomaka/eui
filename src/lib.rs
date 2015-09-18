@@ -2,8 +2,7 @@ use std::any::Any;
 use std::ops;
 
 pub mod layout;
-
-mod predefined;
+pub mod predefined;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Matrix(pub [[f32; 3]; 3]);
@@ -24,6 +23,15 @@ impl Matrix {
             [factor,   0.0 , 0.0],
             [  0.0 , factor, 0.0],
             [  0.0 ,   0.0 , 1.0],
+        ])
+    }
+
+    #[inline]
+    pub fn scale_wh(w: f32, h: f32) -> Matrix {
+        Matrix([
+            [ w,  0.0, 0.0],
+            [0.0,  h,  0.0],
+            [0.0, 0.0, 1.0],
         ])
     }
 
@@ -115,7 +123,9 @@ pub struct Ui<T: ?Sized> where T: Widget {
 
 impl<T> Ui<T> where T: Widget {
     /// Builds a new `Ui`.
-    pub fn new(widget: T, viewport_height_per_width: f32) -> Ui<T> {
+    pub fn new(mut widget: T, viewport_height_per_width: f32) -> Ui<T> {
+        widget.set_dimensions(&Matrix::identity(), viewport_height_per_width);
+
         Ui {
             viewport_height_per_width: viewport_height_per_width,
             widget: widget,

@@ -1,4 +1,4 @@
-use Children;
+use Layout;
 use Event;
 use Matrix;
 use Shape;
@@ -25,8 +25,8 @@ impl Image {
 }
 
 impl Widget for Image {
-    fn build_layout(&self) -> Children {
+    fn build_layout(&self) -> Layout {
         let shape = Shape::Image { matrix: Matrix::identity(), name: self.name.clone() };
-        Children::Shapes(Box::new(shape))
+        Layout::Shapes(Box::new(shape))
     }
 }

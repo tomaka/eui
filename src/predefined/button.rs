@@ -1,4 +1,4 @@
-use Children;
+use Layout;
 use Event;
 use Matrix;
 use Shape;
@@ -28,7 +28,7 @@ impl Button {
 }
 
 impl Widget for Button {
-    fn build_layout(&self) -> Children {
+    fn build_layout(&self) -> Layout {
         if self.hovered {
             self.image_hovered.build_layout()
         } else {

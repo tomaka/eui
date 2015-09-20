@@ -58,10 +58,10 @@ pub mod predefined;
 mod matrix;
 
 pub trait Widget: Send + Sync + 'static {
-    fn build_layout(&self) -> Children;
+    fn build_layout(&self) -> Layout;
 }
 
-pub enum Children {
+pub enum Layout {
     AbsolutePositionned(Vec<Arc<Widget>>),
     HorizontalBar(Vec<Arc<Widget>>),
     VerticalBar,
@@ -102,7 +102,7 @@ impl Node {
         let state_children = self.state.build_layout();
 
         self.shapes = match state_children {
-            Children::Shapes(ref look) => {
+            Layout::Shapes(ref look) => {
                 look.draw()
             },
 
@@ -110,7 +110,7 @@ impl Node {
         };
 
         let node_children: Vec<_> = match state_children {
-            Children::AbsolutePositionned(list) => {
+            Layout::AbsolutePositionned(list) => {
                 list.into_iter().map(|w| {
                     Node {
                         matrix: self.matrix.clone(),
@@ -121,7 +121,7 @@ impl Node {
                 }).collect()
             },
 
-            Children::HorizontalBar(list) => {
+            Layout::HorizontalBar(list) => {
                 let elems_len = 1.0 / list.len() as f32;
                 let scale = Matrix::scale_wh(elems_len, 1.0);
 
@@ -137,7 +137,7 @@ impl Node {
                 }).collect()
             },
 
-            Children::Shapes(_) => Vec::new(),
+            Layout::Shapes(_) => Vec::new(),
 
             _ => unimplemented!()
         };

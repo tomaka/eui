@@ -28,11 +28,11 @@ impl Button {
 }
 
 impl Widget for Button {
-    fn build_children(&self) -> Children {
+    fn build_layout(&self) -> Children {
         if self.hovered {
-            self.image_hovered.build_children()
+            self.image_hovered.build_layout()
         } else {
-            self.image_normal.build_children()
+            self.image_normal.build_layout()
         }
     }
 }

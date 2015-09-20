@@ -58,7 +58,7 @@ pub mod predefined;
 mod matrix;
 
 pub trait Widget: Send + Sync + 'static {
-    fn build_children(&self) -> Children;
+    fn build_layout(&self) -> Children;
 }
 
 pub enum Children {
@@ -99,7 +99,7 @@ struct Node {
 
 impl Node {
     fn rebuild_children(&mut self) {
-        let state_children = self.state.build_children();
+        let state_children = self.state.build_layout();
 
         self.shapes = match state_children {
             Children::Shapes(ref look) => {

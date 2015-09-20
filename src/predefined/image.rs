@@ -25,7 +25,7 @@ impl Image {
 }
 
 impl Widget for Image {
-    fn build_children(&self) -> Children {
+    fn build_layout(&self) -> Children {
         let shape = Shape::Image { matrix: Matrix::identity(), name: self.name.clone() };
         Children::Shapes(Box::new(shape))
     }

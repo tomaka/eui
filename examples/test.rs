@@ -7,8 +7,8 @@ struct SpellIcon {
 }
 
 impl eui::Widget for SpellIcon {
-    fn build_children(&self) -> eui::Children {
-        self.button.build_children()
+    fn build_layout(&self) -> eui::Children {
+        self.button.build_layout()
     }
 }
 
@@ -17,7 +17,7 @@ struct SpellsBar {
 }
 
 impl eui::Widget for SpellsBar {
-    fn build_children(&self) -> eui::Children {
+    fn build_layout(&self) -> eui::Children {
         eui::Children::HorizontalBar(self.icons.iter().map(|s| s.clone() as Arc<_>).collect())
     }
 }

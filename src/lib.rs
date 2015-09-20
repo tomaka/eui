@@ -192,6 +192,11 @@ impl<S> Ui<S> where S: Widget {
         }
     }
 
+    /// Rebuilds the UI after the state has been changed.
+    pub fn rebuild(&mut self) {
+        self.main_node.rebuild_children();
+    }
+
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
     /// other words, shapes at the start of the list can be obstructed by shapes further ahead
     /// in the list).

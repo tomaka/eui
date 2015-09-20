@@ -1,3 +1,4 @@
+use Children;
 use Event;
 use Matrix;
 use Shape;
@@ -24,18 +25,8 @@ impl Image {
 }
 
 impl Widget for Image {
-    fn draw(&self) -> Vec<Shape> {
-        if let Some(matrix) = self.matrix.clone() {
-            let shape = Shape::Image { matrix: matrix, name: self.name.clone() };
-            vec![shape]
-        } else {
-            vec![]
-        }
-    }
-
-    #[inline]
-    fn set_dimensions(&mut self, matrix: &Matrix, viewport_height_per_width: f32) -> Vec<Box<Event>> {
-        self.matrix = Some(matrix.clone());
-        vec![]
+    fn build_children(&self) -> Children {
+        let shape = Shape::Image { matrix: Matrix::identity(), name: self.name.clone() };
+        Children::Shapes(Box::new(shape))
     }
 }

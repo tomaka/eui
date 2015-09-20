@@ -1,3 +1,4 @@
+use Children;
 use Event;
 use Matrix;
 use Shape;
@@ -27,6 +28,16 @@ impl Button {
 }
 
 impl Widget for Button {
+    fn build_children(&self) -> Children {
+        if self.hovered {
+            self.image_hovered.build_children()
+        } else {
+            self.image_normal.build_children()
+        }
+    }
+}
+
+/*impl Widget for Button {
     #[inline]
     fn draw(&self) -> Vec<Shape> {
         if self.hovered {
@@ -65,4 +76,4 @@ impl Widget for Button {
 
         events
     }
-}
+}*/

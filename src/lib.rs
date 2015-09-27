@@ -85,7 +85,7 @@ pub enum Layout {
     AbsolutePositionned(Vec<Arc<Widget>>),
     HorizontalBar {
         alignment: Alignment,
-        children: Vec<Arc<Widget>>,
+        children: Vec<(i8, Arc<Widget>)>,
     },
     VerticalBar,
     Shapes(Box<WidgetLook>),
@@ -148,12 +148,15 @@ impl Node {
             },
 
             Layout::HorizontalBar { alignment, children } => {
-                let elems_len = 1.0 / children.len() as f32;
+                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
                 let scale = Matrix::scale_wh(elems_len, 1.0);
 
-                children.into_iter().enumerate().map(|(offset, widget)| {
+                let mut offset = 0;
+                children.into_iter().map(|(weight, widget)| {
                     let position = (offset as f32 * 2.0 + 1.0) * elems_len - 1.0;
                     let position = Matrix::translate(position, 0.0);
+
+                    offset += weight;
 
                     let mut node = Node {
                         matrix: self.matrix * position * scale,
@@ -163,7 +166,6 @@ impl Node {
                     };
 
                     node.rebuild_children(my_height_per_width);
-
                     node
                 }).collect()
             },

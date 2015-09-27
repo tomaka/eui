@@ -7,27 +7,28 @@ use Widget;
 use predefined::Image;
 use predefined::{MouseEnterEvent, MouseLeaveEvent};
 
-pub struct Button {
+pub struct ImageButton {
     hovered: bool,
     image_normal: Image,
     image_hovered: Image,
 }
 
-impl Button {
+impl ImageButton {
     /// Initializes a new button.
     #[inline]
-    pub fn new<S1, S2>(normal: S1, hovered: S2) -> Button
+    pub fn new<S1, S2>(normal: S1, hovered: S2, height_per_width: f32) -> ImageButton
                        where S1: Into<String>, S2: Into<String>
     {
-        Button {
+        ImageButton {
             hovered: false,
-            image_normal: Image::new(normal),
-            image_hovered: Image::new(hovered),
+            image_normal: Image::new(normal, height_per_width),
+            image_hovered: Image::new(hovered, height_per_width),
         }
     }
 }
 
-impl Widget for Button {
+impl Widget for ImageButton {
+    #[inline]
     fn build_layout(&self) -> Layout {
         if self.hovered {
             self.image_hovered.build_layout()

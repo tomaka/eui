@@ -50,6 +50,7 @@
 //!
 use std::any::Any;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 pub use matrix::Matrix;
 
@@ -61,9 +62,31 @@ pub trait Widget: Send + Sync + 'static {
     fn build_layout(&self) -> Layout;
 }
 
+impl<T> Widget for Mutex<T> where T: Widget {
+    fn build_layout(&self) -> Layout {
+        self.lock().unwrap().build_layout()
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Alignment {
+    Center,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
 pub enum Layout {
     AbsolutePositionned(Vec<Arc<Widget>>),
-    HorizontalBar(Vec<Arc<Widget>>),
+    HorizontalBar {
+        alignment: Alignment,
+        children: Vec<Arc<Widget>>,
+    },
     VerticalBar,
     Shapes(Box<WidgetLook>),
 }
@@ -98,7 +121,10 @@ struct Node {
 }
 
 impl Node {
-    fn rebuild_children(&mut self) {
+    fn rebuild_children(&mut self, parent_height_per_width: f32) {
+        let my_height_per_width = parent_height_per_width * self.matrix.0[1][1]
+                                                                            / self.matrix.0[0][0];
+
         let state_children = self.state.build_layout();
 
         self.shapes = match state_children {
@@ -109,7 +135,7 @@ impl Node {
             _ => Vec::new()
         };
 
-        let node_children: Vec<_> = match state_children {
+        self.children = match state_children {
             Layout::AbsolutePositionned(list) => {
                 list.into_iter().map(|w| {
                     Node {
@@ -121,19 +147,24 @@ impl Node {
                 }).collect()
             },
 
-            Layout::HorizontalBar(list) => {
-                let elems_len = 1.0 / list.len() as f32;
+            Layout::HorizontalBar { alignment, children } => {
+                let elems_len = 1.0 / children.len() as f32;
                 let scale = Matrix::scale_wh(elems_len, 1.0);
 
-                list.into_iter().enumerate().map(|(offset, widget)| {
-                    let position = Matrix::translate(elems_len * offset as f32, 0.0);
+                children.into_iter().enumerate().map(|(offset, widget)| {
+                    let position = (offset as f32 * 2.0 + 1.0) * elems_len - 1.0;
+                    let position = Matrix::translate(position, 0.0);
 
-                    Node {
+                    let mut node = Node {
                         matrix: self.matrix * position * scale,
                         state: widget,
                         children: Vec::new(),
                         shapes: Vec::new(),
-                    }
+                    };
+
+                    node.rebuild_children(my_height_per_width);
+
+                    node
                 }).collect()
             },
 
@@ -141,23 +172,17 @@ impl Node {
 
             _ => unimplemented!()
         };
-
-        self.children = node_children;
-
-        for c in &mut self.children {
-            c.rebuild_children();
-        }
     }
 
     fn build_shapes(&self) -> Vec<Shape> {
         let mut result = Vec::new();
 
         for c in &self.children {
-            for s in c.build_shapes() { result.push(s); }
+            for s in c.build_shapes() { result.push(s.apply_matrix(&self.matrix)); }
         }
 
         for s in &self.shapes {
-            result.push(s.clone());
+            result.push(s.clone().apply_matrix(&self.matrix));
         }
 
         result
@@ -165,7 +190,7 @@ impl Node {
 }
 
 /// Main struct of this library. Handles the UI as a whole.
-pub struct Ui<S> where S: Widget {
+pub struct Ui<S> {
     viewport_height_per_width: f32,
     widget: Arc<S>,
     main_node: Node,
@@ -183,7 +208,7 @@ impl<S> Ui<S> where S: Widget {
             shapes: Vec::new(),
         };
 
-        main_node.rebuild_children();
+        main_node.rebuild_children(viewport_height_per_width);
 
         Ui {
             viewport_height_per_width: viewport_height_per_width,
@@ -194,7 +219,7 @@ impl<S> Ui<S> where S: Widget {
 
     /// Rebuilds the UI after the state has been changed.
     pub fn rebuild(&mut self) {
-        self.main_node.rebuild_children();
+        self.main_node.rebuild_children(self.viewport_height_per_width);
     }
 
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
@@ -241,7 +266,10 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub fn apply_matrix(self, matrix: &Matrix) -> Shape {
-        unimplemented!()
+    pub fn apply_matrix(self, outer: &Matrix) -> Shape {
+        match self {
+            Shape::Text { matrix, text } => Shape::Text { matrix: *outer * matrix, text: text },
+            Shape::Image { matrix, name } => Shape::Image { matrix: *outer * matrix, name: name },
+        }
     }
 }

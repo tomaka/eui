@@ -64,9 +64,9 @@ impl ops::Mul for Matrix {
         let i = me[0][2] * other[2][0] + me[1][2] * other[2][1] + me[2][2] * other[2][2];
 
         Matrix([
-            [a, b, c],
-            [d, e, f],
-            [g, h, i],
+            [a, d, g],
+            [b, e, h],
+            [c, f, i],
         ])
     }
 }

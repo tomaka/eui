@@ -21,7 +21,7 @@ impl<W> Transition<W> where W: Widget {
         // TODO: allow customization
         Transition {
             child: child,
-            anim_start_ns: time::precise_time_ns(),
+            anim_start_ns: time::precise_time_ns() + 1000000000,
             anim_duration_ns: 3 * 1000000000,       // 3s
         }
     }
@@ -29,11 +29,11 @@ impl<W> Transition<W> where W: Widget {
 
 impl<W> Widget for Transition<W> where W: Widget {
     fn build_layout(&self, _: f32, _: Alignment) -> Layout {
-        let anim_progress = time::precise_time_ns() - self.anim_start_ns;
+        let anim_progress = time::precise_time_ns().saturating_sub(self.anim_start_ns);
         let anim_progress = anim_progress as f32 / self.anim_duration_ns as f32;
         let anim_progress = if anim_progress > 1.0 { 1.0 } else { anim_progress };
 
-        let matrix = Matrix::translate(2.718 - anim_progress.exp(), 0.0);
+        let matrix = Matrix::translate(1.0 / (anim_progress * 10.0).exp(), 0.0);
 
         Layout::AbsolutePositionned(vec![
             (matrix, self.child.clone())

@@ -183,12 +183,12 @@ impl Node {
                 };
 
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
-                let scale = Matrix::scale_wh(elems_len, 1.0);
 
                 let mut offset = 0;
                 children.into_iter().map(|(weight, widget)| {
                     let position = (2.0 * offset as f32 + weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(position, 0.0);
+                    let scale = Matrix::scale_wh(weight as f32 * elems_len, 1.0);
 
                     offset += weight;
 

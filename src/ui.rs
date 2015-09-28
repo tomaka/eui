@@ -17,7 +17,7 @@ use Widget;
 
 /// Main struct of this library. Handles the UI as a whole.
 pub struct Ui<S> {
-    viewport_height_per_width: f32,
+    viewport_height_per_width: Mutex<f32>,
     widget: Arc<S>,
     main_node: Mutex<Node>,
     hovering: AtomicBool,
@@ -43,7 +43,7 @@ impl<S> Ui<S> where S: Widget {
         });
 
         Ui {
-            viewport_height_per_width: viewport_height_per_width,
+            viewport_height_per_width: Mutex::new(viewport_height_per_width),
             widget: state,
             main_node: Mutex::new(main_node),
             hovering: AtomicBool::new(false),
@@ -54,7 +54,9 @@ impl<S> Ui<S> where S: Widget {
     /// Rebuilds the UI after the state has been changed.
     #[inline]
     pub fn rebuild(&self) {
-        self.main_node.lock().unwrap().rebuild_children(self.viewport_height_per_width, Alignment {
+        let viewport: f32 = self.viewport_height_per_width.lock().unwrap().clone();
+
+        self.main_node.lock().unwrap().rebuild_children(viewport, Alignment {
             horizontal: HorizontalAlignment::Center,
             vertical: VerticalAlignment::Center,
         });
@@ -67,10 +69,12 @@ impl<S> Ui<S> where S: Widget {
     /// in the list).
     #[inline]
     pub fn draw(&self) -> Vec<Shape> {
+        let viewport: f32 = self.viewport_height_per_width.lock().unwrap().clone();
+
         let mut main_node = self.main_node.lock().unwrap();
 
         if main_node.needs_rebuild() {
-            main_node.rebuild_children(self.viewport_height_per_width, Alignment {
+            main_node.rebuild_children(viewport, Alignment {
                 horizontal: HorizontalAlignment::Center,
                 vertical: VerticalAlignment::Center,
             });
@@ -80,11 +84,19 @@ impl<S> Ui<S> where S: Widget {
     }
 
     /// Changes the height per width ratio of the viewport and rebuilds the UI.
-    // TODO: use &self not &mut self
     #[inline]
-    pub fn set_viewport_height_per_width(&mut self, value: f32) {
-        if self.viewport_height_per_width != value {
-            self.viewport_height_per_width = value;
+    pub fn set_viewport_height_per_width(&self, value: f32) {
+        let rebuild = {
+            let mut viewport = self.viewport_height_per_width.lock().unwrap();
+            if *viewport != value {
+                *viewport = value;
+                true
+            } else {
+                false
+            }
+        };
+
+        if rebuild {
             self.rebuild();
         }
     }

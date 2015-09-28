@@ -33,7 +33,7 @@ impl<W> Widget for Transition<W> where W: Widget {
         let anim_progress = anim_progress as f32 / self.anim_duration_ns as f32;
         let anim_progress = if anim_progress > 1.0 { 1.0 } else { anim_progress };
 
-        let matrix = Matrix::translate(1.0 / (anim_progress * 10.0).exp(), 0.0);
+        let matrix = Matrix::translate((-anim_progress * 10.0).exp(), 0.0);
 
         Layout::AbsolutePositionned(vec![
             (matrix, self.child.clone())

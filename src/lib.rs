@@ -87,7 +87,7 @@ pub trait Widget: Send + Sync + 'static {
     }
 
     #[inline]
-    fn handle_event(&self, _event: Box<Any>) -> EventOutcome {
+    fn handle_event(&self, _event: &Any, _source_child: Option<usize>) -> EventOutcome {
         Default::default()
     }
 }
@@ -104,8 +104,8 @@ impl<T> Widget for Mutex<T> where T: Widget {
     }
 
     #[inline]
-    fn handle_event(&self, event: Box<Any>) -> EventOutcome {
-        self.lock().unwrap().handle_event(event)
+    fn handle_event(&self, event: &Any, child: Option<usize>) -> EventOutcome {
+        self.lock().unwrap().handle_event(event, child)
     }
 }
 

@@ -51,7 +51,7 @@ impl Widget for ImageButton {
     }
 
     #[inline]
-    fn handle_event(&self, event: Box<Any>) -> EventOutcome {
+    fn handle_event(&self, event: &Any, _: Option<usize>) -> EventOutcome {
         if let Some(event) = event.downcast_ref::<MouseEnterEvent>() {
             self.hovered.store(true, Ordering::Relaxed);
 

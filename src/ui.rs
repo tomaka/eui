@@ -8,7 +8,6 @@ use std::mem;
 use predefined;
 
 use Alignment;
-use EventOutcome;
 use HorizontalAlignment;
 use Layout;
 use Matrix;
@@ -90,17 +89,13 @@ impl<S> Ui<S> where S: Widget {
         }
     }
 
+    /// Sets the position and state of the cursor.
+    ///
+    /// This function will search for shapes that collide with the cursor and send mouse events
+    /// to their owner.
     pub fn set_cursor(&self, cursor: Option<[f32; 2]>, down: bool) {
         let mut main_node = self.main_node.lock().unwrap();
-
-        let outcome = main_node.mouse_update(cursor, self.mouse_down.swap(down, Ordering::Relaxed),
-                                             down);
-        if outcome.refresh_layout {
-            main_node.needs_rebuild = true;
-        }
-
-        // FIXME:
-        main_node.needs_rebuild = true;
+        main_node.mouse_update(cursor, self.mouse_down.swap(down, Ordering::Relaxed), down);
 
         // FIXME: update "hovering"
     }
@@ -232,25 +227,41 @@ impl Node {
         result
     }
 
-    fn send_event(&self, event: Box<Any>) -> EventOutcome {
-        self.state.handle_event(event)
+    /// Sends an event to the node and returns `true` if the event must be propagated to
+    /// the parent.
+    fn send_event(&mut self, event: &Any, child_num: Option<usize>) -> bool {
+        let outcome = self.state.handle_event(event, child_num);
+
+        if outcome.refresh_layout {
+            self.needs_rebuild = true;
+        }
+
+        outcome.propagate_to_parent
     }
 
+    /// Sends mouse events to the node, and returns a list of events that must be propagated to the
+    /// parent.
     fn mouse_update(&mut self, mouse: Option<[f32; 2]>, new_mouse_down: bool, old_mouse_down: bool)
-                    -> EventOutcome
+                    -> Vec<Box<Any>>
     {
-        for child in &mut self.children {
-            let outcome = child.mouse_update(mouse, new_mouse_down, old_mouse_down);
+        let mut result = Vec::new();
 
-            if outcome.refresh_layout {
-                child.needs_rebuild = true;
+        {
+            let mut events_for_self = Vec::new();
+
+            for (num, child) in self.children.iter_mut().enumerate() {
+                for ev in child.mouse_update(mouse, new_mouse_down, old_mouse_down) {
+                    events_for_self.push((ev, num));
+                }
+
+                // TODO: break if event handled
             }
 
-            if outcome.propagate_to_parent {
-                // TODO: implement
+            for (ev, child) in events_for_self {
+                if self.send_event(&*ev, Some(child)) {
+                    result.push(ev);
+                }
             }
-
-            // TODO: break if event handled
         }
 
         let hit = if let Some(mouse) = mouse {
@@ -259,18 +270,28 @@ impl Node {
             false
         };
 
-        // TODO: do not send these events twice
+        // TODO: do not send these events if not necessary (eg. do not send mouse leave if mouse
+        // wasn't over the element)
         if hit {
-            self.send_event(Box::new(predefined::MouseEnterEvent))
+            let ev = Box::new(predefined::MouseEnterEvent) as Box<Any>;
+            if self.send_event(&*ev, None) {
+                result.push(ev);
+            }
+
         } else {
-            self.send_event(Box::new(predefined::MouseLeaveEvent))
+            let ev = Box::new(predefined::MouseLeaveEvent) as Box<Any>;
+            if self.send_event(&*ev, None) {
+                result.push(ev);
+            }
         };
 
-        if !new_mouse_down && old_mouse_down {
-            self.send_event(Box::new(predefined::MouseClick));
+        if hit && !new_mouse_down && old_mouse_down {
+            let ev = Box::new(predefined::MouseClick) as Box<Any>;
+            if self.send_event(&*ev, None) {
+                result.push(ev);
+            }
         }
 
-        // FIXME: wrong
-        Default::default()
+        result
     }
 }

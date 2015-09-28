@@ -118,6 +118,21 @@ struct Node {
 }
 
 impl Node {
+    #[inline]
+    fn needs_rebuild(&self) -> bool {
+        if self.state.needs_rebuild() {
+            return true;
+        }
+
+        for child in &self.children {
+            if child.needs_rebuild() {
+                return true;
+            }
+        }
+
+        false
+    }
+
     fn rebuild_children(&mut self, parent_height_per_width: f32, alignment: Alignment) {
         let my_height_per_width = parent_height_per_width * self.matrix.0[1][1]
                                                                             / self.matrix.0[0][0];
@@ -194,7 +209,7 @@ impl Node {
 pub struct Ui<S> {
     viewport_height_per_width: f32,
     widget: Arc<S>,
-    main_node: Node,
+    main_node: Mutex<Node>,
 }
 
 impl<S> Ui<S> where S: Widget {
@@ -217,14 +232,14 @@ impl<S> Ui<S> where S: Widget {
         Ui {
             viewport_height_per_width: viewport_height_per_width,
             widget: state,
-            main_node: main_node,
+            main_node: Mutex::new(main_node),
         }
     }
 
     /// Rebuilds the UI after the state has been changed.
     #[inline]
-    pub fn rebuild(&mut self) {
-        self.main_node.rebuild_children(self.viewport_height_per_width, Alignment {
+    pub fn rebuild(&self) {
+        self.main_node.lock().unwrap().rebuild_children(self.viewport_height_per_width, Alignment {
             horizontal: HorizontalAlignment::Center,
             vertical: VerticalAlignment::Center,
         });
@@ -235,7 +250,16 @@ impl<S> Ui<S> where S: Widget {
     /// in the list).
     #[inline]
     pub fn draw(&self) -> Vec<Shape> {
-        self.main_node.build_shapes()
+        let mut main_node = self.main_node.lock().unwrap();
+
+        if main_node.needs_rebuild() {
+            main_node.rebuild_children(self.viewport_height_per_width, Alignment {
+                horizontal: HorizontalAlignment::Center,
+                vertical: VerticalAlignment::Center,
+            });
+        }
+
+        main_node.build_shapes()
     }
 
     /// Changes the height per width ratio of the viewport and rebuilds the UI.

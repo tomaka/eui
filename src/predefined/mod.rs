@@ -7,6 +7,8 @@ pub use self::transition::Transition;
 pub struct MouseEnterEvent;
 #[derive(Copy, Clone, Debug)]
 pub struct MouseLeaveEvent;
+#[derive(Copy, Clone, Debug)]
+pub struct MouseClick;
 
 mod image_button;
 mod image;

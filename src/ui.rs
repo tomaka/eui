@@ -22,6 +22,7 @@ pub struct Ui<S> {
     widget: Arc<S>,
     main_node: Mutex<Node>,
     hovering: AtomicBool,
+    mouse_down: AtomicBool,
 }
 
 impl<S> Ui<S> where S: Widget {
@@ -47,6 +48,7 @@ impl<S> Ui<S> where S: Widget {
             widget: state,
             main_node: Mutex::new(main_node),
             hovering: AtomicBool::new(false),
+            mouse_down: AtomicBool::new(false),
         }
     }
 
@@ -88,19 +90,19 @@ impl<S> Ui<S> where S: Widget {
         }
     }
 
-    pub fn set_cursor(&self, cursor: Option<[f32; 2]>) {
+    pub fn set_cursor(&self, cursor: Option<[f32; 2]>, down: bool) {
         let mut main_node = self.main_node.lock().unwrap();
 
-        let outcome = main_node.mouse_update(cursor);
+        let outcome = main_node.mouse_update(cursor, self.mouse_down.swap(down, Ordering::Relaxed),
+                                             down);
         if outcome.refresh_layout {
             main_node.needs_rebuild = true;
         }
 
-        // FIXME: update "hovering"
-    }
+        // FIXME:
+        main_node.needs_rebuild = true;
 
-    pub fn set_cursor_down(&mut self, down: bool) {
-        unimplemented!()
+        // FIXME: update "hovering"
     }
 
     /// Returns true if the mouse is hovering one of the elements of the UI.
@@ -234,9 +236,11 @@ impl Node {
         self.state.handle_event(event)
     }
 
-    fn mouse_update(&mut self, mouse: Option<[f32; 2]>) -> EventOutcome {
+    fn mouse_update(&mut self, mouse: Option<[f32; 2]>, new_mouse_down: bool, old_mouse_down: bool)
+                    -> EventOutcome
+    {
         for child in &mut self.children {
-            let outcome = child.mouse_update(mouse);
+            let outcome = child.mouse_update(mouse, new_mouse_down, old_mouse_down);
 
             if outcome.refresh_layout {
                 child.needs_rebuild = true;
@@ -260,6 +264,13 @@ impl Node {
             self.send_event(Box::new(predefined::MouseEnterEvent))
         } else {
             self.send_event(Box::new(predefined::MouseLeaveEvent))
+        };
+
+        if !new_mouse_down && old_mouse_down {
+            self.send_event(Box::new(predefined::MouseClick));
         }
+
+        // FIXME: wrong
+        Default::default()
     }
 }

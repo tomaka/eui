@@ -145,9 +145,9 @@ impl Node {
         false
     }
 
-    fn rebuild_children(&mut self, parent_height_per_width: f32, alignment: Alignment) {
-        let my_height_per_width = self.matrix.0[1][1] / self.matrix.0[0][0];
-
+    fn rebuild_children(&mut self, viewport_height_per_width: f32, alignment: Alignment) {
+        // TODO: take rotation into account for the height per width
+        let my_height_per_width = viewport_height_per_width * self.matrix.0[1][1] / self.matrix.0[0][0];
         let mut state_children = self.state.build_layout(my_height_per_width, alignment);
 
         self.shapes = match state_children {
@@ -174,7 +174,7 @@ impl Node {
                         needs_rebuild: false,
                     };
 
-                    node.rebuild_children(my_height_per_width, children_alignment);
+                    node.rebuild_children(viewport_height_per_width, children_alignment);
                     node
                 }).collect()
             },
@@ -203,7 +203,7 @@ impl Node {
                         needs_rebuild: false,
                     };
 
-                    node.rebuild_children(my_height_per_width, children_alignment);
+                    node.rebuild_children(viewport_height_per_width, children_alignment);
                     node
                 }).collect()
             },

@@ -27,7 +27,7 @@ impl Label {
 
 impl Widget for Label {
     #[inline]
-    fn build_layout(&self) -> Layout {
+    fn build_layout(&self, _: f32) -> Layout {
         Layout::HorizontalBar { alignment: ::Alignment::Center, children: vec![] }
     }
 }

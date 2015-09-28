@@ -29,11 +29,11 @@ impl ImageButton {
 
 impl Widget for ImageButton {
     #[inline]
-    fn build_layout(&self) -> Layout {
+    fn build_layout(&self, height_per_width: f32) -> Layout {
         if self.hovered {
-            self.image_hovered.build_layout()
+            self.image_hovered.build_layout(height_per_width)
         } else {
-            self.image_normal.build_layout()
+            self.image_normal.build_layout(height_per_width)
         }
     }
 }

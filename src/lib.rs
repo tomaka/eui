@@ -51,6 +51,7 @@
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::mem;
 
 pub use matrix::Matrix;
 
@@ -59,12 +60,23 @@ pub mod predefined;
 mod matrix;
 
 pub trait Widget: Send + Sync + 'static {
-    fn build_layout(&self) -> Layout;
+    fn build_layout(&self, height_per_width: f32) -> Layout;
+
+    #[inline]
+    fn needs_rebuild(&self) -> bool {
+        false
+    }
 }
 
 impl<T> Widget for Mutex<T> where T: Widget {
-    fn build_layout(&self) -> Layout {
-        self.lock().unwrap().build_layout()
+    #[inline]
+    fn build_layout(&self, height_per_width: f32) -> Layout {
+        self.lock().unwrap().build_layout(height_per_width)
+    }
+
+    #[inline]
+    fn needs_rebuild(&self) -> bool {
+        self.lock().unwrap().needs_rebuild()
     }
 }
 
@@ -88,29 +100,7 @@ pub enum Layout {
         children: Vec<(i8, Arc<Widget>)>,
     },
     VerticalBar,
-    Shapes(Box<WidgetLook>),
-}
-
-pub trait WidgetLook {
-    fn draw(&self) -> Vec<Shape>;
-}
-
-impl WidgetLook for Shape {
-    fn draw(&self) -> Vec<Shape> {
-        vec![self.clone()]
-    }
-}
-
-impl WidgetLook for Vec<Shape> {
-    fn draw(&self) -> Vec<Shape> {
-        self.clone()
-    }
-}
-
-impl WidgetLook for () {
-    fn draw(&self) -> Vec<Shape> {
-        vec![]
-    }
+    Shapes(Vec<Shape>),
 }
 
 struct Node {
@@ -125,13 +115,10 @@ impl Node {
         let my_height_per_width = parent_height_per_width * self.matrix.0[1][1]
                                                                             / self.matrix.0[0][0];
 
-        let state_children = self.state.build_layout();
+        let mut state_children = self.state.build_layout(my_height_per_width);
 
         self.shapes = match state_children {
-            Layout::Shapes(ref look) => {
-                look.draw()
-            },
-
+            Layout::Shapes(ref mut look) => mem::replace(look, Vec::new()),
             _ => Vec::new()
         };
 
@@ -220,6 +207,7 @@ impl<S> Ui<S> where S: Widget {
     }
 
     /// Rebuilds the UI after the state has been changed.
+    #[inline]
     pub fn rebuild(&mut self) {
         self.main_node.rebuild_children(self.viewport_height_per_width);
     }
@@ -227,8 +215,18 @@ impl<S> Ui<S> where S: Widget {
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
     /// other words, shapes at the start of the list can be obstructed by shapes further ahead
     /// in the list).
+    #[inline]
     pub fn draw(&self) -> Vec<Shape> {
         self.main_node.build_shapes()
+    }
+
+    /// Changes the height per width ratio of the viewport and rebuilds the UI.
+    #[inline]
+    pub fn set_viewport_height_per_width(&mut self, value: f32) {
+        if self.viewport_height_per_width != value {
+            self.viewport_height_per_width = value;
+            self.rebuild();
+        }
     }
 
     pub fn set_cursor(&mut self, cursor: Option<[f32; 2]>) {

@@ -1,3 +1,4 @@
+use Alignment;
 use Layout;
 use Event;
 use Matrix;
@@ -29,11 +30,11 @@ impl ImageButton {
 
 impl Widget for ImageButton {
     #[inline]
-    fn build_layout(&self, height_per_width: f32) -> Layout {
+    fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout {
         if self.hovered {
-            self.image_hovered.build_layout(height_per_width)
+            self.image_hovered.build_layout(height_per_width, alignment)
         } else {
-            self.image_normal.build_layout(height_per_width)
+            self.image_normal.build_layout(height_per_width, alignment)
         }
     }
 }

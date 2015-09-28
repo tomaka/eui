@@ -60,7 +60,7 @@ pub mod predefined;
 mod matrix;
 
 pub trait Widget: Send + Sync + 'static {
-    fn build_layout(&self, height_per_width: f32) -> Layout;
+    fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout;
 
     #[inline]
     fn needs_rebuild(&self) -> bool {
@@ -70,8 +70,8 @@ pub trait Widget: Send + Sync + 'static {
 
 impl<T> Widget for Mutex<T> where T: Widget {
     #[inline]
-    fn build_layout(&self, height_per_width: f32) -> Layout {
-        self.lock().unwrap().build_layout(height_per_width)
+    fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout {
+        self.lock().unwrap().build_layout(height_per_width, alignment)
     }
 
     #[inline]
@@ -81,22 +81,29 @@ impl<T> Widget for Mutex<T> where T: Widget {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Alignment {
+pub struct Alignment {
+    pub horizontal: HorizontalAlignment,
+    pub vertical: VerticalAlignment,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum HorizontalAlignment {
     Center,
     Left,
     Right,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VerticalAlignment {
+    Center,
     Top,
     Bottom,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
 }
 
 pub enum Layout {
     AbsolutePositionned(Vec<Arc<Widget>>),
     HorizontalBar {
-        alignment: Alignment,
+        alignment: VerticalAlignment,
         children: Vec<(i8, Arc<Widget>)>,
     },
     VerticalBar,
@@ -111,11 +118,11 @@ struct Node {
 }
 
 impl Node {
-    fn rebuild_children(&mut self, parent_height_per_width: f32) {
+    fn rebuild_children(&mut self, parent_height_per_width: f32, alignment: Alignment) {
         let my_height_per_width = parent_height_per_width * self.matrix.0[1][1]
                                                                             / self.matrix.0[0][0];
 
-        let mut state_children = self.state.build_layout(my_height_per_width);
+        let mut state_children = self.state.build_layout(my_height_per_width, alignment);
 
         self.shapes = match state_children {
             Layout::Shapes(ref mut look) => mem::replace(look, Vec::new()),
@@ -135,6 +142,11 @@ impl Node {
             },
 
             Layout::HorizontalBar { alignment, children } => {
+                let children_alignment = Alignment {
+                    horizontal: HorizontalAlignment::Center,
+                    vertical: alignment,
+                };
+
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
                 let scale = Matrix::scale_wh(elems_len, 1.0);
 
@@ -152,7 +164,7 @@ impl Node {
                         shapes: Vec::new(),
                     };
 
-                    node.rebuild_children(my_height_per_width);
+                    node.rebuild_children(my_height_per_width, children_alignment);
                     node
                 }).collect()
             },
@@ -197,7 +209,10 @@ impl<S> Ui<S> where S: Widget {
             shapes: Vec::new(),
         };
 
-        main_node.rebuild_children(viewport_height_per_width);
+        main_node.rebuild_children(viewport_height_per_width, Alignment {
+            horizontal: HorizontalAlignment::Center,
+            vertical: VerticalAlignment::Center,
+        });
 
         Ui {
             viewport_height_per_width: viewport_height_per_width,
@@ -209,7 +224,10 @@ impl<S> Ui<S> where S: Widget {
     /// Rebuilds the UI after the state has been changed.
     #[inline]
     pub fn rebuild(&mut self) {
-        self.main_node.rebuild_children(self.viewport_height_per_width);
+        self.main_node.rebuild_children(self.viewport_height_per_width, Alignment {
+            horizontal: HorizontalAlignment::Center,
+            vertical: VerticalAlignment::Center,
+        });
     }
 
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in

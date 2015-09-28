@@ -1,3 +1,4 @@
+use Alignment;
 use Layout;
 use Event;
 use Matrix;
@@ -32,7 +33,7 @@ impl Image {
 
 impl Widget for Image {
     #[inline]
-    fn build_layout(&self, height_per_width: f32) -> Layout {
+    fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout {
         let matrix = if height_per_width > self.height_per_width {
             Matrix::scale_wh(1.0, self.height_per_width / height_per_width)
         } else {

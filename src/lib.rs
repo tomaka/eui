@@ -48,6 +48,8 @@
 //! These calls will be propagated to the methods of the `Widget` trait so that the state can
 //! update itself.
 //!
+extern crate time;
+
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -101,7 +103,7 @@ pub enum VerticalAlignment {
 }
 
 pub enum Layout {
-    AbsolutePositionned(Vec<Arc<Widget>>),
+    AbsolutePositionned(Vec<(Matrix, Arc<Widget>)>),
     HorizontalBar {
         alignment: VerticalAlignment,
         children: Vec<(i8, Arc<Widget>)>,
@@ -111,6 +113,7 @@ pub enum Layout {
 }
 
 struct Node {
+    /// Absolute matrix (relative to root)
     matrix: Matrix,
     state: Arc<Widget>,
     children: Vec<Node>,
@@ -134,8 +137,7 @@ impl Node {
     }
 
     fn rebuild_children(&mut self, parent_height_per_width: f32, alignment: Alignment) {
-        let my_height_per_width = parent_height_per_width * self.matrix.0[1][1]
-                                                                            / self.matrix.0[0][0];
+        let my_height_per_width = self.matrix.0[1][1] / self.matrix.0[0][0];
 
         let mut state_children = self.state.build_layout(my_height_per_width, alignment);
 
@@ -146,13 +148,21 @@ impl Node {
 
         self.children = match state_children {
             Layout::AbsolutePositionned(list) => {
-                list.into_iter().map(|w| {
-                    Node {
-                        matrix: self.matrix.clone(),
+                let children_alignment = Alignment {
+                    horizontal: HorizontalAlignment::Center,
+                    vertical: VerticalAlignment::Center,
+                };
+
+                list.into_iter().map(|(matrix, w)| {
+                    let mut node = Node {
+                        matrix: self.matrix.clone() * matrix,
                         state: w, 
                         children: Vec::new(),
                         shapes: Vec::new(),
-                    }
+                    };
+
+                    node.rebuild_children(my_height_per_width, children_alignment);
+                    node
                 }).collect()
             },
 
@@ -194,7 +204,7 @@ impl Node {
         let mut result = Vec::new();
 
         for c in &self.children {
-            for s in c.build_shapes() { result.push(s.apply_matrix(&self.matrix)); }
+            for s in c.build_shapes() { result.push(s); }
         }
 
         for s in &self.shapes {

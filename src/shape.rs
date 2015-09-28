@@ -1,6 +1,10 @@
 use Matrix;
 
 /// A shape that can be drawn by any of the UI's components.
+///
+/// The meaning of the matrix depends on the context in which the shape is manipulated. When
+/// returned by `build_layout`, the matrix is relative to the widget. When returned by `draw`,
+/// the matrix is absolute (ie. relative to the viewport).
 #[derive(Clone, Debug)]
 pub enum Shape {
     Text {

@@ -67,6 +67,10 @@ impl<S> Ui<S> where S: Widget {
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
     /// other words, shapes at the start of the list can be obstructed by shapes further ahead
     /// in the list).
+    ///
+    /// The matrices stored in the shapes assume that the viewport uses OpenGL coordinates. This
+    /// means that the viewport has a width of 2, a height of 2, and that the origin is at the
+    /// center of the screen.
     #[inline]
     pub fn draw(&self) -> Vec<Shape> {
         let viewport: f32 = self.viewport_height_per_width.lock().unwrap().clone();
@@ -118,6 +122,9 @@ impl<S> Ui<S> where S: Widget {
     }
 
     /// Returns a reference to the main widget stored in the object.
+    ///
+    /// Note that the UI won't be rebuilt after calling this function. You have to manually call
+    /// the `rebuild()` method.
     #[inline]
     pub fn widget(&self) -> &S {
         &self.widget

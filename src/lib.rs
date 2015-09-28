@@ -64,8 +64,12 @@ mod matrix;
 mod shape;
 mod ui;
 
+/// Structure returned by `handle_event`, indicating information back to the library.
+#[derive(Debug, Clone)]
 pub struct EventOutcome {
+    /// If `true`, the element's layout will be refreshed before the next draw. Default is `false`.
     pub refresh_layout: bool,
+    /// If `true`, the event will be sent to the parent element. Default is `true`.
     pub propagate_to_parent: bool,
 }
 
@@ -78,14 +82,37 @@ impl Default for EventOutcome {
     }
 }
 
+/// Implement this on types that contain the state of a widget.
 pub trait Widget: Send + Sync + 'static {
+    /// Returns a structure indicating the content of this widget.
+    ///
+    /// The `height_per_width` contains the ratio of the height of the widget divided by its width.
+    /// The `alignment` is just an indication passed by the parent.
     fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout;
 
+    /// This method is called before drawing. It should return `true` if the layout of this element
+    /// should be rebuilt.
+    ///
+    /// The default implementation just returns `false`.
+    ///
+    /// This method is useful when dealing with animation. As long as the widget's content is
+    /// moving, you should return `true`.
     #[inline]
     fn needs_rebuild(&self) -> bool {
         false
     }
 
+    /// The widget received an event. It can update itself, then it should return an `EventOutcome`
+    /// indicating the library what to do next. The default implementation returns
+    /// `Default::default()`.
+    ///
+    /// The event can be:
+    ///
+    /// * `predefined::MouseEnterEvent`
+    /// * `predefined::MouseLeaveEvent`
+    /// * `predefined::MouseClick`
+    /// * Any other event produced by another widget.
+    ///
     #[inline]
     fn handle_event(&self, _event: &Any, _source_child: Option<usize>) -> EventOutcome {
         Default::default()

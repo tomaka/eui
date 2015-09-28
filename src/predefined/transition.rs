@@ -4,7 +4,6 @@ use std::sync::Arc;
 use time;
 
 use Alignment;
-use Event;
 use Layout;
 use Matrix;
 use Shape;

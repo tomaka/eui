@@ -71,6 +71,20 @@ impl ops::Mul for Matrix {
     }
 }
 
+impl ops::Mul<[f32; 3]> for Matrix {
+    type Output = [f32; 3];
+
+    fn mul(self, other: [f32; 3]) -> [f32; 3] {
+        let me = self.0;
+
+        let x = me[0][0] * other[0] + me[1][0] * other[1] + me[2][0] * other[2];
+        let y = me[0][1] * other[0] + me[1][1] * other[1] + me[2][1] * other[2];
+        let z = me[0][2] * other[0] + me[1][2] * other[1] + me[2][2] * other[2];
+
+        [x, y, z]
+    }
+}
+
 impl From<[[f32; 3]; 3]> for Matrix {
     fn from(val: [[f32; 3]; 3]) -> Matrix {
         Matrix(val)

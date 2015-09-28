@@ -53,7 +53,10 @@ extern crate time;
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::mem;
+use std::ops::Deref;
 
 pub use matrix::Matrix;
 
@@ -61,12 +64,31 @@ pub mod predefined;
 
 mod matrix;
 
+pub struct EventOutcome {
+    pub refresh_layout: bool,
+    pub propagate_to_parent: bool,
+}
+
+impl Default for EventOutcome {
+    fn default() -> EventOutcome {
+        EventOutcome {
+            refresh_layout: false,
+            propagate_to_parent: true,
+        }
+    }
+}
+
 pub trait Widget: Send + Sync + 'static {
     fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout;
 
     #[inline]
     fn needs_rebuild(&self) -> bool {
         false
+    }
+
+    #[inline]
+    fn handle_event(&self, event: Box<Any>) -> EventOutcome {
+        Default::default()
     }
 }
 
@@ -79,6 +101,11 @@ impl<T> Widget for Mutex<T> where T: Widget {
     #[inline]
     fn needs_rebuild(&self) -> bool {
         self.lock().unwrap().needs_rebuild()
+    }
+
+    #[inline]
+    fn handle_event(&self, event: Box<Any>) -> EventOutcome {
+        self.lock().unwrap().handle_event(event)
     }
 }
 
@@ -118,16 +145,22 @@ struct Node {
     state: Arc<Widget>,
     children: Vec<Node>,
     shapes: Vec<Shape>,
+    needs_rebuild: bool,
 }
 
 impl Node {
     #[inline]
-    fn needs_rebuild(&self) -> bool {
+    fn needs_rebuild(&mut self) -> bool {
+        if self.needs_rebuild {
+            self.needs_rebuild = false;
+            return true;
+        }
+
         if self.state.needs_rebuild() {
             return true;
         }
 
-        for child in &self.children {
+        for child in &mut self.children {
             if child.needs_rebuild() {
                 return true;
             }
@@ -142,7 +175,10 @@ impl Node {
         let mut state_children = self.state.build_layout(my_height_per_width, alignment);
 
         self.shapes = match state_children {
-            Layout::Shapes(ref mut look) => mem::replace(look, Vec::new()),
+            Layout::Shapes(ref mut look) => {
+                let shapes = mem::replace(look, Vec::new());
+                shapes.into_iter().map(|s| s.apply_matrix(&self.matrix)).collect()
+            },
             _ => Vec::new()
         };
 
@@ -159,6 +195,7 @@ impl Node {
                         state: w, 
                         children: Vec::new(),
                         shapes: Vec::new(),
+                        needs_rebuild: false,
                     };
 
                     node.rebuild_children(my_height_per_width, children_alignment);
@@ -187,6 +224,7 @@ impl Node {
                         state: widget,
                         children: Vec::new(),
                         shapes: Vec::new(),
+                        needs_rebuild: false,
                     };
 
                     node.rebuild_children(my_height_per_width, children_alignment);
@@ -198,6 +236,8 @@ impl Node {
 
             _ => unimplemented!()
         };
+
+        self.needs_rebuild = false;
     }
 
     fn build_shapes(&self) -> Vec<Shape> {
@@ -208,10 +248,43 @@ impl Node {
         }
 
         for s in &self.shapes {
-            result.push(s.clone().apply_matrix(&self.matrix));
+            result.push(s.clone());
         }
 
         result
+    }
+
+    fn send_event(&self, event: Box<Any>) -> EventOutcome {
+        self.state.handle_event(event)
+    }
+
+    fn mouse_update(&mut self, mouse: Option<[f32; 2]>) -> EventOutcome {
+        for child in &mut self.children {
+            let outcome = child.mouse_update(mouse);
+
+            if outcome.refresh_layout {
+                child.needs_rebuild = true;
+            }
+
+            if outcome.propagate_to_parent {
+                // TODO: implement
+            }
+
+            // TODO: break if event handled
+        }
+
+        let hit = if let Some(mouse) = mouse {
+            self.shapes.iter().find(|s| s.hit_test(&mouse)).is_some()
+        } else {
+            false
+        };
+
+        // TODO: do not send these events twice
+        if hit {
+            self.send_event(Box::new(predefined::MouseEnterEvent))
+        } else {
+            self.send_event(Box::new(predefined::MouseLeaveEvent))
+        }
     }
 }
 
@@ -220,6 +293,7 @@ pub struct Ui<S> {
     viewport_height_per_width: f32,
     widget: Arc<S>,
     main_node: Mutex<Node>,
+    hovering: AtomicBool,
 }
 
 impl<S> Ui<S> where S: Widget {
@@ -232,6 +306,7 @@ impl<S> Ui<S> where S: Widget {
             state: state.clone() as Arc<_>,
             children: Vec::new(),
             shapes: Vec::new(),
+            needs_rebuild: false,
         };
 
         main_node.rebuild_children(viewport_height_per_width, Alignment {
@@ -243,6 +318,7 @@ impl<S> Ui<S> where S: Widget {
             viewport_height_per_width: viewport_height_per_width,
             widget: state,
             main_node: Mutex::new(main_node),
+            hovering: AtomicBool::new(false),
         }
     }
 
@@ -253,6 +329,8 @@ impl<S> Ui<S> where S: Widget {
             horizontal: HorizontalAlignment::Center,
             vertical: VerticalAlignment::Center,
         });
+
+        // TODO: update mouse?
     }
 
     /// "Draws" the UI by returning a list of shapes. The list is ordered from bottom to top (in
@@ -273,6 +351,7 @@ impl<S> Ui<S> where S: Widget {
     }
 
     /// Changes the height per width ratio of the viewport and rebuilds the UI.
+    // TODO: use &self not &mut self
     #[inline]
     pub fn set_viewport_height_per_width(&mut self, value: f32) {
         if self.viewport_height_per_width != value {
@@ -281,12 +360,24 @@ impl<S> Ui<S> where S: Widget {
         }
     }
 
-    pub fn set_cursor(&mut self, cursor: Option<[f32; 2]>) {
-        unimplemented!()
+    pub fn set_cursor(&self, cursor: Option<[f32; 2]>) {
+        let mut main_node = self.main_node.lock().unwrap();
+
+        let outcome = main_node.mouse_update(cursor);
+        if outcome.refresh_layout {
+            main_node.needs_rebuild = true;
+        }
+
+        // FIXME: update "hovering"
     }
 
     pub fn set_cursor_down(&mut self, down: bool) {
         unimplemented!()
+    }
+
+    /// Returns true if the mouse is hovering one of the elements of the UI.
+    pub fn is_hovering(&self) -> bool {
+        self.hovering.load(Ordering::Relaxed)
     }
 
     /// Returns a reference to the main widget stored in the object.
@@ -295,14 +386,6 @@ impl<S> Ui<S> where S: Widget {
         &self.widget
     }
 }
-
-
-
-
-
-/// Trait describing an event.
-pub trait Event: Any {}
-impl<T> Event for T where T: Any {}
 
 /// A shape that can be drawn by any of the UI's components.
 #[derive(Clone, Debug)]
@@ -318,10 +401,60 @@ pub enum Shape {
 }
 
 impl Shape {
+    #[inline]
     pub fn apply_matrix(self, outer: &Matrix) -> Shape {
         match self {
             Shape::Text { matrix, text } => Shape::Text { matrix: *outer * matrix, text: text },
             Shape::Image { matrix, name } => Shape::Image { matrix: *outer * matrix, name: name },
+        }
+    }
+
+    /// Returns true if the point's coordinates hit the shape.
+    pub fn hit_test(&self, point: &[f32; 2]) -> bool {
+        match self {
+            &Shape::Text { .. } => {
+                false       // FIXME: 
+            },
+
+            &Shape::Image { ref matrix, .. } => {
+                let top_left = *matrix * [-1.0, 1.0, 1.0];
+                let top_left = [top_left[0] / top_left[2], top_left[1] / top_left[2]];
+
+                let top_right = *matrix * [1.0, 1.0, 1.0];
+                let top_right = [top_right[0] / top_right[2], top_right[1] / top_right[2]];
+
+                let bot_left = *matrix * [-1.0, -1.0, 1.0];
+                let bot_left = [bot_left[0] / bot_left[2], bot_left[1] / bot_left[2]];
+
+                let bot_right = *matrix * [1.0, -1.0, 1.0];
+                let bot_right = [bot_right[0] / bot_right[2], bot_right[1] / bot_right[2]];
+
+                if (point[0] - top_left[0]) * (top_right[0] - top_left[0]) +
+                   (point[1] - top_left[1]) * (top_right[1] - top_left[1]) < 0.0
+                {
+                    return false;
+                }
+
+                if (point[0] - top_right[0]) * (bot_right[0] - top_right[0]) +
+                   (point[1] - top_right[1]) * (bot_right[1] - top_right[1]) < 0.0
+                {
+                    return false;
+                }
+
+                if (point[0] - bot_right[0]) * (bot_left[0] - bot_right[0]) +
+                   (point[1] - bot_right[1]) * (bot_left[1] - bot_right[1]) < 0.0
+                {
+                    return false;
+                }
+
+                if (point[0] - bot_left[0]) * (top_left[0] - bot_left[0]) +
+                   (point[1] - bot_left[1]) * (top_left[1] - bot_left[1]) < 0.0
+                {
+                    return false;
+                }
+
+                true
+            },
         }
     }
 }

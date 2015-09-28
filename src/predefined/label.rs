@@ -1,6 +1,5 @@
 use Alignment;
 use Layout;
-use Event;
 use Matrix;
 use Shape;
 use Widget;

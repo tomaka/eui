@@ -1,5 +1,4 @@
 use Alignment;
-use Event;
 use HorizontalAlignment;
 use Layout;
 use Matrix;

@@ -5,8 +5,6 @@ use std::sync::atomic::Ordering;
 use Alignment;
 use EventOutcome;
 use Layout;
-use Matrix;
-use Shape;
 use Widget;
 
 use predefined::Image;

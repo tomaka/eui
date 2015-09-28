@@ -38,7 +38,7 @@ impl Widget for Label {
     fn build_layout(&self, height_per_width: f32, alignment: Alignment) -> Layout {
         // TODO: everything here is temporary
 
-        let text_ratio = self.text.len() as f32;       // TODO: wrong
+        let text_ratio = 1.0 / self.text.len() as f32;       // TODO: wrong
 
         let matrix = if height_per_width > text_ratio {
             let y = match alignment.vertical {

@@ -195,60 +195,60 @@ impl Node {
                 }).collect()
             },
 
-            Layout::HorizontalBar { alignment, children } => {
-                let children_alignment = Alignment {
-                    horizontal: HorizontalAlignment::Center,
-                    vertical: alignment,
-                };
-
-                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
+            Layout::HorizontalBar { children } => {
+                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
-                children.into_iter().map(|(weight, widget)| {
-                    let position = (2.0 * offset as f32 + weight as f32) * elems_len - 1.0;
+                children.into_iter().map(|child| {
+                    let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(position, 0.0);
-                    let scale = Matrix::scale_wh(weight as f32 * elems_len, 1.0);
+                    let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
 
-                    offset += weight;
+                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                           (child.padding_bottom - child.padding_top) * 0.5);
+                    let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
+                                                       1.0 - child.padding_bottom - child.padding_top);
+
+                    offset += child.weight;
 
                     let mut node = Node {
-                        matrix: self.matrix * position * scale,
-                        state: widget,
+                        matrix: self.matrix * position * scale * inner_position * inner_scale,
+                        state: child.child,
                         children: Vec::new(),
                         shapes: Vec::new(),
                         needs_rebuild: false,
                     };
 
-                    node.rebuild_children(viewport_height_per_width, children_alignment);
+                    node.rebuild_children(viewport_height_per_width, child.alignment);
                     node
                 }).collect()
             },
 
-            Layout::VerticalBar { alignment, children } => {
-                let children_alignment = Alignment {
-                    horizontal: alignment,
-                    vertical: VerticalAlignment::Center,
-                };
-
-                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
+            Layout::VerticalBar { children } => {
+                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
-                children.into_iter().map(|(weight, widget)| {
-                    let position = (2.0 * offset as f32 + weight as f32) * elems_len - 1.0;
+                children.into_iter().map(|child| {
+                    let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(0.0, position);
-                    let scale = Matrix::scale_wh(1.0, weight as f32 * elems_len);
+                    let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
 
-                    offset += weight;
+                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                           (child.padding_bottom - child.padding_top) * 0.5);
+                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
+
+                    offset += child.weight;
 
                     let mut node = Node {
-                        matrix: self.matrix * position * scale,
-                        state: widget,
+                        matrix: self.matrix * position * scale * inner_position * inner_scale,
+                        state: child.child,
                         children: Vec::new(),
                         shapes: Vec::new(),
                         needs_rebuild: false,
                     };
 
-                    node.rebuild_children(viewport_height_per_width, children_alignment);
+                    node.rebuild_children(viewport_height_per_width, child.alignment);
                     node
                 }).collect()
             },

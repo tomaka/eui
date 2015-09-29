@@ -136,7 +136,7 @@ impl<T> Widget for Mutex<T> where T: Widget {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Alignment {
     pub horizontal: HorizontalAlignment,
     pub vertical: VerticalAlignment,
@@ -149,6 +149,12 @@ pub enum HorizontalAlignment {
     Right,
 }
 
+impl Default for HorizontalAlignment {
+    fn default() -> HorizontalAlignment {
+        HorizontalAlignment::Center
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VerticalAlignment {
     Center,
@@ -156,15 +162,29 @@ pub enum VerticalAlignment {
     Bottom,
 }
 
+impl Default for VerticalAlignment {
+    fn default() -> VerticalAlignment {
+        VerticalAlignment::Center
+    }
+}
+
 pub enum Layout {
     AbsolutePositionned(Vec<(Matrix, Arc<Widget>)>),
     HorizontalBar {
-        alignment: VerticalAlignment,
-        children: Vec<(i8, Arc<Widget>)>,
+        children: Vec<Child>,
     },
     VerticalBar {
-        alignment: HorizontalAlignment,
-        children: Vec<(i8, Arc<Widget>)>,
+        children: Vec<Child>,
     },
     Shapes(Vec<Shape>),
+}
+
+pub struct Child {
+    pub child: Arc<Widget>,
+    pub weight: i8,
+    pub alignment: Alignment,
+    pub padding_top: f32,
+    pub padding_right: f32,
+    pub padding_bottom: f32,
+    pub padding_left: f32,
 }

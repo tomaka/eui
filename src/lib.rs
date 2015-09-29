@@ -162,6 +162,9 @@ pub enum Layout {
         alignment: VerticalAlignment,
         children: Vec<(i8, Arc<Widget>)>,
     },
-    VerticalBar,
+    VerticalBar {
+        alignment: HorizontalAlignment,
+        children: Vec<(i8, Arc<Widget>)>,
+    },
     Shapes(Vec<Shape>),
 }

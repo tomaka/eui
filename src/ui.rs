@@ -224,9 +224,36 @@ impl Node {
                 }).collect()
             },
 
-            Layout::Shapes(_) => Vec::new(),
+            Layout::VerticalBar { alignment, children } => {
+                let children_alignment = Alignment {
+                    horizontal: alignment,
+                    vertical: VerticalAlignment::Center,
+                };
 
-            _ => unimplemented!()
+                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.0) as f32;
+
+                let mut offset = 0;
+                children.into_iter().map(|(weight, widget)| {
+                    let position = (2.0 * offset as f32 + weight as f32) * elems_len - 1.0;
+                    let position = Matrix::translate(0.0, position);
+                    let scale = Matrix::scale_wh(1.0, weight as f32 * elems_len);
+
+                    offset += weight;
+
+                    let mut node = Node {
+                        matrix: self.matrix * position * scale,
+                        state: widget,
+                        children: Vec::new(),
+                        shapes: Vec::new(),
+                        needs_rebuild: false,
+                    };
+
+                    node.rebuild_children(viewport_height_per_width, children_alignment);
+                    node
+                }).collect()
+            },
+
+            Layout::Shapes(_) => Vec::new(),
         };
 
         self.needs_rebuild = false;

@@ -113,7 +113,8 @@ impl<S> Ui<S> where S: Widget {
     /// to their owner.
     pub fn set_cursor(&self, cursor: Option<[f32; 2]>, down: bool) {
         let mut main_node = self.main_node.lock().unwrap();
-        main_node.mouse_update(cursor, self.mouse_down.swap(down, Ordering::Relaxed), down);
+        main_node.mouse_update(cursor, &Matrix::identity(),
+                               self.mouse_down.swap(down, Ordering::Relaxed), down);
 
         // FIXME: update "hovering"
     }
@@ -422,7 +423,8 @@ impl Node {
 
     /// Sends mouse events to the node, and returns a list of events that must be propagated to the
     /// parent.
-    fn mouse_update(&mut self, mouse: Option<[f32; 2]>, new_mouse_down: bool, old_mouse_down: bool)
+    fn mouse_update(&mut self, mouse: Option<[f32; 2]>, parent_matrix: &Matrix,
+                    new_mouse_down: bool, old_mouse_down: bool)
                     -> Vec<Box<Any>>
     {
         let mut result = Vec::new();
@@ -431,7 +433,9 @@ impl Node {
             let mut events_for_self = Vec::new();
 
             for (num, child) in self.children.iter_mut().enumerate() {
-                for ev in child.mouse_update(mouse, new_mouse_down, old_mouse_down) {
+                for ev in child.mouse_update(mouse, &(*parent_matrix * self.matrix), new_mouse_down,
+                                             old_mouse_down)
+                {
                     events_for_self.push((ev, num));
                 }
 
@@ -446,7 +450,7 @@ impl Node {
         }
 
         let hit = if let Some(mouse) = mouse {
-            self.shapes.iter().find(|s| (*s).clone().apply_matrix(&self.matrix).hit_test(&mouse)).is_some()
+            self.shapes.iter().find(|s| (*s).clone().apply_matrix(&self.matrix).apply_matrix(parent_matrix).hit_test(&mouse)).is_some()
         } else {
             false
         };

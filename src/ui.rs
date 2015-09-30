@@ -215,39 +215,99 @@ impl Node {
     fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
                    my_height_per_width: f32, other_align: bool) -> Node
     {
-        let mut empty_top = if vertical { 0.0 } else { 1.0 };
-        let mut empty_right = if vertical { 1.0 } else { 0.0 };
-        let mut empty_bottom = if vertical { 0.0 } else { 1.0 };
-        let mut empty_left = if vertical { 1.0 } else { 0.0 };
+        // inverse of the sum of the weight of all children
+        let weight_sum_inverse = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
-        // sum of the weight of all children
-        let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
-
-
-        struct TempNode {
-            node: Node,
-            child: Child,
-            matrix: Matrix,
-            position: [f32; 2],
-            scale: [f32; 2],
-            actual_content_percent: f32,
-            perp_content_percent: f32,
-            flow_vs_perp_ratio: f32,
-            inner_padding_matrix: Matrix,
-        }
-
-        let mut offset = 0;
-        let mut children = children.into_iter().map(|child| {
-            // position of the center of the child relative to the center of the current node
-            let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
-            let position = if vertical { [0.0, position] } else { [position, 0.0] };
-
-            // scale of the child relative to the current node
-            let scale = if vertical {
-                [1.0, child.weight as f32 * elems_len]
+        // the first step is to build the children nodes
+        let children: Vec<_> = children.into_iter().map(|child| {
+            // calculating the height per width of the child
+            let height_per_width = my_height_per_width * if vertical {
+                child.weight as f32 * weight_sum_inverse
             } else {
-                [child.weight as f32 * elems_len, 1.0]
+                1.0 / (weight_sum_inverse * child.weight as f32)
             };
+
+            // building its node
+            let node = Node::new(child.child.clone(), height_per_width, child.alignment);
+            (child, node)
+        }).collect();
+
+        // percentage of the widget (in the direction of the flow, ie. vertical if `vertical` is
+        // true, otherwise horizontal) that is effectively filled with content
+        let flow_effective_percentage = children.iter().map(|&(ref child, ref node)| {
+            let flow_empty = if child.collapse {
+                if vertical {
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                } else {
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                }
+            } else {
+                0.0
+            };
+
+            (2.0 - flow_empty) * 0.5 * child.weight as f32 * weight_sum_inverse
+        }).fold(0.0, |a, b| a + b);
+
+        // position of the left or bottom border of the first element
+        let flow_start_border_position = if vertical {
+            match alignment.vertical {
+                VerticalAlignment::Bottom => -1.0,
+                VerticalAlignment::Center => -flow_effective_percentage,
+                VerticalAlignment::Top => 1.0 - flow_effective_percentage * 2.0,
+            }
+        } else {
+            match alignment.horizontal {
+                HorizontalAlignment::Left => -1.0,
+                HorizontalAlignment::Center => -flow_effective_percentage,
+                HorizontalAlignment::Right => 1.0 - flow_effective_percentage * 2.0,
+            }
+        };
+
+        // if `Some`, then the effective content of the perpendicular dimension must be this
+        // given percentage
+        let required_effective_perp_percentage = if other_align {
+            Some(1.0 / children.iter().map(|&(ref child, ref node)| {
+                let flow_percent = child.weight as f32 * weight_sum_inverse * 0.5 * (2.0 - if child.collapse {
+                    if vertical {
+                        node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                    } else {
+                        node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                    }
+                } else {
+                    0.0
+                });
+
+                let perp_percent = 0.5 * (2.0 - if vertical {
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                } else {
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                });
+
+                flow_percent / perp_percent
+            }).fold(0.0, |a, b| a + b))
+
+        } else {
+            None
+        };
+
+
+        // now we iterate over each child and calculate its data
+
+        let mut my_empty_top = if vertical { 0.0 } else { 1.0 };
+        let mut my_empty_right = if vertical { 1.0 } else { 0.0 };
+        let mut my_empty_bottom = if vertical { 0.0 } else { 1.0 };
+        let mut my_empty_left = if vertical { 1.0 } else { 0.0 };
+
+        let mut flow_current_border_position = flow_start_border_position;
+        let num_children = children.len();
+        let children: Vec<_> = children.into_iter().enumerate().map(|(child_num, (child, node))| {
+            // the percentage of the perpendicular dimension that is effectively filled with
+            // content
+            let effective_perp_percentage = 0.5 * (2.0 - if vertical {
+                node.empty_left + node.empty_right - child.padding_left - child.padding_right
+            } else {
+                node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+            });
 
             // matrix containing the transformation to adjust for the padding
             let inner_padding_matrix = {
@@ -258,140 +318,79 @@ impl Node {
                 inner_position * inner_scale
             };
 
-            let node = Node::new(child.child.clone(), my_height_per_width * scale[1] / scale[0],
-                                 child.alignment);
-
-            // percent of the child that actually contains stuff, relative to the current node
-            let actual_content_percent = elems_len * child.weight as f32 * if child.collapse {
+            // percentage of the total flow of the widget to be filled by this child
+            let flow_percent = child.weight as f32 * weight_sum_inverse * 0.5 * (2.0 - if child.collapse {
                 if vertical {
-                    (1.0 + child.padding_top * 0.5 + child.padding_bottom * 0.5 -
-                        node.empty_bottom * 0.5 - node.empty_top * 0.5)
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
                 } else {
-                    (1.0 + child.padding_left * 0.5 + child.padding_right * 0.5 -
-                        node.empty_left * 0.5 - node.empty_right * 0.5)
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
                 }
             } else {
-                1.0
-            };
+                0.0
+            });
 
-            let perp_content_percent = if vertical {
-                1.0 + child.padding_left * 0.5 + child.padding_right * 0.5
-                    - node.empty_left * 0.5 - node.empty_right * 0.5
-            } else {
-                1.0 + child.padding_top * 0.5 + child.padding_bottom * 0.5
-                    - node.empty_top * 0.5 - node.empty_bottom * 0.5
-            };
-
-            let flow_vs_perp_ratio = actual_content_percent / perp_content_percent;;
-
-            offset += child.weight;
-
+            // adjusting the `my_empty_*` variables
             if vertical {
-                if node.empty_left - child.padding_left < empty_left { empty_left = node.empty_left - child.padding_left; }
-                if node.empty_right - child.padding_right < empty_right { empty_right = node.empty_right - child.padding_right; }
+                if node.empty_left - child.padding_left < my_empty_left { my_empty_left = node.empty_left - child.padding_left; }
+                if node.empty_right - child.padding_right < my_empty_right { my_empty_right = node.empty_right - child.padding_right; }
+                if child_num == 0 {
+                    if !child.collapse {
+                        my_empty_bottom = (node.empty_bottom - child.padding_bottom) * child.weight as f32 * weight_sum_inverse;
+                    }
+                }
+                if child_num == num_children - 1 {
+                    if !child.collapse {
+                        my_empty_top = (node.empty_top - child.padding_top) * child.weight as f32 * weight_sum_inverse;
+                    }
+                }
             } else {
-                if node.empty_top - child.padding_top < empty_top { empty_top = node.empty_top - child.padding_top; }
-                if node.empty_bottom - child.padding_bottom < empty_bottom { empty_bottom = node.empty_bottom - child.padding_bottom; }
-            }
-
-            TempNode {
-                node: node,
-                child: child,
-                matrix: Matrix::translate(position[0], position[1]) * Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
-                position: position,
-                scale: scale,
-                actual_content_percent: actual_content_percent,
-                perp_content_percent: perp_content_percent,
-                flow_vs_perp_ratio: flow_vs_perp_ratio,
-                inner_padding_matrix: inner_padding_matrix,
-            }
-        }).collect::<Vec<_>>();
-
-        let real_len = 2.0 * children.iter().map(|tmp_node| tmp_node.actual_content_percent)
-                                     .fold(0.0, |a, b| a + b);
-
-        let start_offset = if vertical {
-            match alignment.vertical {
-                VerticalAlignment::Bottom => -1.0,
-                VerticalAlignment::Center => -real_len * 0.5,
-                VerticalAlignment::Top => 1.0 - real_len,
-            }
-        } else {
-            match alignment.horizontal {
-                HorizontalAlignment::Left => -1.0,
-                HorizontalAlignment::Center => -real_len * 0.5,
-                HorizontalAlignment::Right => 1.0 - real_len,
-            }
-        };
-
-        let mut offset = start_offset;
-        for tmp_node in children.iter_mut() {
-            let position = offset + tmp_node.actual_content_percent;
-            offset += tmp_node.actual_content_percent * 2.0;
-
-            tmp_node.position = if vertical { [0.0, position] } else { [position, 0.0] };
-        }
-
-        if other_align {
-            // additional step to handle perpendicular alignment
-            let sum = children.iter().map(|c| c.flow_vs_perp_ratio).fold(0.0, |a, b| a + b);
-            let req_perp_percent = 1.0 / sum;
-
-            for tmp_node in children.iter_mut() {
-                let req_flow_ratio = tmp_node.flow_vs_perp_ratio * req_perp_percent;
-
-                if vertical {
-                    tmp_node.scale[0] *= req_perp_percent / tmp_node.perp_content_percent;
-                    tmp_node.scale[1] *= req_flow_ratio / tmp_node.actual_content_percent;
-                } else {
-                    tmp_node.scale[0] *= req_flow_ratio / tmp_node.actual_content_percent;
-                    tmp_node.scale[1] *= req_perp_percent / tmp_node.perp_content_percent;
+                if node.empty_top - child.padding_top < my_empty_top { my_empty_top = node.empty_top - child.padding_top; }
+                if node.empty_bottom - child.padding_bottom < my_empty_bottom { my_empty_bottom = node.empty_bottom - child.padding_bottom; }
+                if child_num == 0 {
+                    if !child.collapse {
+                        my_empty_left = (node.empty_left - child.padding_left) * child.weight as f32 * weight_sum_inverse;
+                    }
                 }
-            }
-        }
-
-        for tmp_node in children.iter_mut() {
-            tmp_node.matrix = Matrix::translate(tmp_node.position[0], tmp_node.position[1]) *
-                                          Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *
-                                          tmp_node.inner_padding_matrix;
-        }
-
-        if vertical {
-            if let Some(c) = children.get(0) {
-                if !c.child.collapse {
-                    empty_bottom = (c.node.empty_bottom - c.child.padding_bottom) * c.child.weight as f32 * elems_len;
+                if child_num == num_children - 1 {
+                    if !child.collapse {
+                        my_empty_right = (node.empty_right - child.padding_right) * child.weight as f32 * weight_sum_inverse;
+                    }
                 }
             }
 
-            if let Some(c) = children.last() {
-                if !c.child.collapse {
-                    empty_top = (c.node.empty_top - c.child.padding_top) * c.child.weight as f32 * elems_len;
-                }
-            }
+            // position of the center of this child in the flow
+            let flow_center_position = flow_current_border_position + flow_percent;     // * 2 / 2
+            flow_current_border_position += flow_percent * 2.0;
 
-        } else {
-            if let Some(c) = children.get(0) {
-                if !c.child.collapse {
-                    empty_left = (c.node.empty_left - c.child.padding_left) * c.child.weight as f32 * elems_len;
-                }
-            }
+            // matrix containing the position of this child
+            let position_matrix = if vertical {
+                Matrix::translate(0.0, flow_center_position)
+            } else {
+                Matrix::translate(flow_center_position, 0.0)
+            };
 
-            if let Some(c) = children.last() {
-                if !c.child.collapse {
-                    empty_right = (c.node.empty_right - c.child.padding_right) * c.child.weight as f32 * elems_len;
-                }
-            }
-        }
+            // matrix containing the scale of this child
+            let scale_matrix = if vertical {
+                Matrix::scale_wh(1.0, child.weight as f32 * weight_sum_inverse)
+            } else {
+                Matrix::scale_wh(child.weight as f32 * weight_sum_inverse, 1.0)
+            };
+
+            // the total matrix for this child
+            let total_matrix = position_matrix * scale_matrix * inner_padding_matrix;
+
+            (total_matrix, node)
+        }).collect();
 
         Node {
             state: state,
-            children: children.into_iter().map(|child| (child.matrix, child.node)).collect(),
+            children: children,
             shapes: Vec::new(),
             needs_rebuild: false,
-            empty_top: empty_top,
-            empty_right: empty_right,
-            empty_bottom: empty_bottom,
-            empty_left: empty_left,
+            empty_top: my_empty_top,
+            empty_right: my_empty_right,
+            empty_bottom: my_empty_bottom,
+            empty_left: my_empty_left,
         }
     }
 

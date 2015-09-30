@@ -181,14 +181,14 @@ impl Node {
                 }
             },
 
-            Layout::HorizontalBar { alignment, children } => {
+            Layout::HorizontalBar { alignment, children, vertical_align } => {
                 Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
-                                  false, my_height_per_width, matrix)
+                                  false, my_height_per_width, matrix, vertical_align)
             },
 
-            Layout::VerticalBar { alignment, children } => {
+            Layout::VerticalBar { alignment, children, horizontal_align } => {
                 Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
-                                  true, my_height_per_width, matrix)
+                                  true, my_height_per_width, matrix, horizontal_align)
             },
 
             Layout::Shapes(shapes) => {
@@ -224,7 +224,7 @@ impl Node {
     }
 
     fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
-                   my_height_per_width: f32, matrix: Matrix) -> Node
+                   my_height_per_width: f32, matrix: Matrix, other_align: bool) -> Node
     {
         let mut empty_top = if vertical { 0.0 } else { 1.0 };
         let mut empty_right = if vertical { 1.0 } else { 0.0 };
@@ -241,6 +241,8 @@ impl Node {
             position: [f32; 2],
             scale: [f32; 2],
             actual_content_percent: f32,
+            perp_content_percent: f32,
+            flow_vs_perp_ratio: f32,
             inner_padding_matrix: Matrix,
         }
 
@@ -284,6 +286,16 @@ impl Node {
                 1.0
             };
 
+            let perp_content_percent = if vertical {
+                1.0 + child.padding_left * 0.5 + child.padding_right * 0.5
+                    - node.empty_left * 0.5 - node.empty_right * 0.5
+            } else {
+                1.0 + child.padding_top * 0.5 + child.padding_bottom * 0.5
+                    - node.empty_top * 0.5 - node.empty_bottom * 0.5
+            };
+
+            let flow_vs_perp_ratio = actual_content_percent / perp_content_percent;;
+
             offset += child.weight;
 
             if vertical {
@@ -300,6 +312,8 @@ impl Node {
                 position: position,
                 scale: scale,
                 actual_content_percent: actual_content_percent,
+                perp_content_percent: perp_content_percent,
+                flow_vs_perp_ratio: flow_vs_perp_ratio,
                 inner_padding_matrix: inner_padding_matrix,
             }
         }).collect::<Vec<_>>();
@@ -325,9 +339,30 @@ impl Node {
         for tmp_node in children.iter_mut() {
             let position = offset + tmp_node.actual_content_percent;
             offset += tmp_node.actual_content_percent * 2.0;
-            let position = if vertical { [0.0, position] } else { [position, 0.0] };
 
-            tmp_node.node.matrix = Matrix::translate(position[0], position[1]) *
+            tmp_node.position = if vertical { [0.0, position] } else { [position, 0.0] };
+        }
+
+        if other_align {
+            // additional step to handle perpendicular alignment
+            let sum = children.iter().map(|c| c.flow_vs_perp_ratio).fold(0.0, |a, b| a + b);
+            let req_perp_percent = 1.0 / sum;
+
+            for tmp_node in children.iter_mut() {
+                let req_flow_ratio = tmp_node.flow_vs_perp_ratio * req_perp_percent;
+
+                if vertical {
+                    tmp_node.scale[0] *= req_perp_percent / tmp_node.perp_content_percent;
+                    tmp_node.scale[1] *= req_flow_ratio / tmp_node.actual_content_percent;
+                } else {
+                    tmp_node.scale[0] *= req_flow_ratio / tmp_node.actual_content_percent;
+                    tmp_node.scale[1] *= req_perp_percent / tmp_node.perp_content_percent;
+                }
+            }
+        }
+
+        for tmp_node in children.iter_mut() {
+            tmp_node.node.matrix = Matrix::translate(tmp_node.position[0], tmp_node.position[1]) *
                                           Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *
                                           tmp_node.inner_padding_matrix;
         }

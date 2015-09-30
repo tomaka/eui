@@ -183,6 +183,7 @@ pub enum Layout {
         alignment: HorizontalAlignment,
         /// List of children.
         children: Vec<Child>,
+        vertical_align: bool,
     },
     /// The same as `HorizontalBar`, but vertical.
     VerticalBar {
@@ -190,6 +191,7 @@ pub enum Layout {
         alignment: VerticalAlignment,
         /// List of children.
         children: Vec<Child>,
+        horizontal_align: bool,
     },
     Shapes(Vec<Shape>),
 }

@@ -313,7 +313,7 @@ impl Node {
                     let position = offset + len;
                     offset += len * 2.0;
                     let position = Matrix::translate(0.0, position);
-                    let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
+                    let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
 
                     let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
                                                            (child.padding_bottom - child.padding_top) * 0.5);
@@ -426,7 +426,7 @@ impl Node {
         }
 
         let hit = if let Some(mouse) = mouse {
-            self.shapes.iter().find(|s| s.hit_test(&mouse)).is_some()
+            self.shapes.iter().find(|s| (*s).clone().apply_matrix(&self.matrix).hit_test(&mouse)).is_some()
         } else {
             false
         };

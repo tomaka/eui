@@ -153,12 +153,13 @@ impl Node {
     {
         // TODO: take rotation into account for the height per width
         let my_height_per_width = viewport_height_per_width * matrix.0[1][1] / matrix.0[0][0];
-        let mut state_children = state.build_layout(my_height_per_width, alignment);
 
         let mut empty_top = 1.0;
         let mut empty_right = 1.0;
         let mut empty_bottom = 1.0;
         let mut empty_left = 1.0;
+
+        let mut state_children = state.build_layout(my_height_per_width, alignment);
 
         let shapes = match state_children {
             Layout::Shapes(ref mut look) => {
@@ -177,9 +178,7 @@ impl Node {
             _ => Vec::new()
         };
 
-        let mut my_children: Vec<Node>;
-
-        match state_children {
+        let new_children: Vec<Node> = match state_children {
             Layout::AbsolutePositionned(list) => {
                 // TODO: arbitrary alignment
                 let children_alignment = Alignment {
@@ -187,17 +186,17 @@ impl Node {
                     vertical: VerticalAlignment::Center,
                 };
 
-                my_children = list.into_iter().map(|(m, w)| {
+                list.into_iter().map(|(m, w)| {
                     Node::new(w, matrix.clone() * m, viewport_height_per_width,
                               children_alignment)
-                }).collect();
+                }).collect()
             },
 
             Layout::HorizontalBar { alignment, children } => {
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
-                my_children = children.iter().map(|child| {
+                let mut my_children: Vec<Node> = children.iter().map(|child| {
                     let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(position, 0.0);
                     let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
@@ -252,13 +251,15 @@ impl Node {
 
                     node.matrix = matrix * position * scale * inner_position * inner_scale;
                 }
+
+                my_children
             },
 
             Layout::VerticalBar { alignment, children } => {
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
-                my_children = children.iter().map(|child| {
+                let my_children = children.iter().map(|child| {
                     let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(0.0, position);
                     let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
@@ -279,15 +280,17 @@ impl Node {
 
                     node
                 }).collect();
+
+                my_children
             },
 
-            Layout::Shapes(_) => my_children = Vec::new(),
+            Layout::Shapes(_) => Vec::new(),
         };
 
         Node {
             matrix: matrix,
             state: state,
-            children: my_children,
+            children: new_children,
             shapes: shapes,
             needs_rebuild: false,
             empty_top: empty_top,

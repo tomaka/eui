@@ -150,11 +150,11 @@ struct Node {
 }
 
 impl Node {
-    fn new(state: Arc<Widget>, matrix: Matrix, viewport_height_per_width: f32,
+    fn new(state: Arc<Widget>, matrix: Matrix, parent_viewport_height_per_width: f32,
            alignment: Alignment) -> Node
     {
         // TODO: take rotation into account for the height per width
-        let my_height_per_width = viewport_height_per_width * matrix.0[1][1] / matrix.0[0][0];
+        let my_height_per_width = parent_viewport_height_per_width * matrix.0[1][1] / matrix.0[0][0];
 
         match state.build_layout(my_height_per_width, alignment) {
             Layout::AbsolutePositionned(list) => {
@@ -165,7 +165,7 @@ impl Node {
                 };
 
                 let new_children: Vec<Node> = list.into_iter().map(|(m, w)| {
-                    Node::new(w, m, viewport_height_per_width, children_alignment)
+                    Node::new(w, m, my_height_per_width, children_alignment)
                 }).collect();
 
                 Node {
@@ -183,12 +183,12 @@ impl Node {
 
             Layout::HorizontalBar { alignment, children } => {
                 Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
-                                  false, viewport_height_per_width, matrix)
+                                  false, my_height_per_width, matrix)
             },
 
             Layout::VerticalBar { alignment, children } => {
                 Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
-                                  true, viewport_height_per_width, matrix)
+                                  true, my_height_per_width, matrix)
             },
 
             Layout::Shapes(shapes) => {
@@ -224,7 +224,7 @@ impl Node {
     }
 
     fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
-                   viewport_height_per_width: f32, matrix: Matrix) -> Node
+                   my_height_per_width: f32, matrix: Matrix) -> Node
     {
         let mut empty_top = if vertical { 0.0 } else { 1.0 };
         let mut empty_right = if vertical { 1.0 } else { 0.0 };
@@ -269,7 +269,7 @@ impl Node {
             let node = Node::new(child.child.clone(),
                                  Matrix::translate(position[0], position[1]) *
                                     Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
-                                 viewport_height_per_width, child.alignment);
+                                 my_height_per_width, child.alignment);
 
             // percent of the child that actually contains stuff, relative to the current node
             let actual_content_percent = elems_len * child.weight as f32 * if child.collapse {

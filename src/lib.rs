@@ -65,12 +65,14 @@ mod shape;
 mod ui;
 
 /// Structure returned by `handle_event`, indicating information back to the library.
-#[derive(Debug, Clone)]
 pub struct EventOutcome {
     /// If `true`, the element's layout will be refreshed before the next draw. Default is `false`.
     pub refresh_layout: bool,
     /// If `true`, the event will be sent to the parent element. Default is `true`.
     pub propagate_to_parent: bool,
+    /// Events to propagate to the parent (in addition to the current event if
+    /// `propagate_to_parent` is true).
+    pub events_for_parent: Vec<Box<Any>>,
 }
 
 impl Default for EventOutcome {
@@ -78,6 +80,7 @@ impl Default for EventOutcome {
         EventOutcome {
             refresh_layout: false,
             propagate_to_parent: true,
+            events_for_parent: Vec::new(),
         }
     }
 }

@@ -234,30 +234,55 @@ impl Node {
         // sum of the weight of all children
         let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
+
+        struct TempNode {
+            node: Node,
+            child: Child,
+            position: [f32; 2],
+            scale: [f32; 2],
+            actual_content_percent: f32,
+            inner_padding_matrix: Matrix,
+        }
+
         let mut offset = 0;
-        let mut my_children: Vec<Node> = children.iter().map(|child| {
+        let mut children = children.into_iter().map(|child| {
+            // position of the center of the child relative to the center of the current node
             let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
-            let position = if vertical {
-                Matrix::translate(0.0, position)
-            } else {
-                Matrix::translate(position, 0.0)
-            };
+            let position = if vertical { [0.0, position] } else { [position, 0.0] };
+
+            // scale of the child relative to the current node
             let scale = if vertical {
-                Matrix::scale_wh(1.0, child.weight as f32 * elems_len)
+                [1.0, child.weight as f32 * elems_len]
             } else {
-                Matrix::scale_wh(child.weight as f32 * elems_len, 1.0)
+                [child.weight as f32 * elems_len, 1.0]
             };
 
-            let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                   (child.padding_bottom - child.padding_top) * 0.5);
-            let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                               1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-            offset += child.weight;
+            // matrix containing the transformation to adjust for the padding
+            let inner_padding_matrix = {
+                let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                       (child.padding_bottom - child.padding_top) * 0.5);
+                let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                                   1.0 - (child.padding_bottom + child.padding_top) * 0.5);
+                inner_position * inner_scale
+            };
 
             let node = Node::new(child.child.clone(),
-                                 matrix * position * scale * inner_position * inner_scale,
+                                 matrix * Matrix::translate(position[0], position[1]) *
+                                    Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
                                  viewport_height_per_width, child.alignment);
+
+            // percent of the child that actually contains stuff, relative to the current node
+            let actual_content_percent = elems_len * child.weight as f32 * if child.collapse {
+                if vertical {
+                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
+                } else {
+                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
+                }
+            } else {
+                1.0
+            };
+
+            offset += child.weight;
 
             if vertical {
                 if node.empty_left < empty_left { empty_left = node.empty_left }
@@ -267,21 +292,18 @@ impl Node {
                 if node.empty_bottom < empty_bottom { empty_bottom = node.empty_bottom }
             }
 
-            node
-        }).collect();
+            TempNode {
+                node: node,
+                child: child,
+                position: position,
+                scale: scale,
+                actual_content_percent: actual_content_percent,
+                inner_padding_matrix: inner_padding_matrix,
+            }
+        }).collect::<Vec<_>>();
 
-        let real_len = 2.0 * my_children.iter().zip(children.iter()).map(|(node, child)| {
-            let f = if child.collapse {
-                if vertical {
-                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
-                } else {
-                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
-                }
-            } else {
-                1.0
-            };
-            elems_len * child.weight as f32 * f
-        }).fold(0.0, |a, b| a + b);
+        let real_len = 2.0 * children.iter().map(|tmp_node| tmp_node.actual_content_percent)
+                                     .fold(0.0, |a, b| a + b);
 
         let start_offset = if vertical {
             match alignment.vertical {
@@ -298,62 +320,39 @@ impl Node {
         };
 
         let mut offset = start_offset;
-        for (node, child) in my_children.iter_mut().zip(children.iter()) {
-            let len = if child.collapse {
-                if vertical {
-                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
-                } else {
-                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
-                }
-            } else {
-                1.0
-            };
-            let len = elems_len * child.weight as f32 * len;
+        for tmp_node in children.iter_mut() {
+            let position = offset + tmp_node.actual_content_percent;
+            offset += tmp_node.actual_content_percent * 2.0;
+            let position = if vertical { [0.0, position] } else { [position, 0.0] };
 
-            let position = offset + len;
-            offset += len * 2.0;
-            let position = if vertical {
-                Matrix::translate(0.0, position)
-            } else {
-                Matrix::translate(position, 0.0)
-            };
-            let scale = if vertical {
-                Matrix::scale_wh(1.0, child.weight as f32 * elems_len)
-            } else {
-                Matrix::scale_wh(child.weight as f32 * elems_len, 1.0)
-            };
-
-            let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                   (child.padding_bottom - child.padding_top) * 0.5);
-            let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                               1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-            node.matrix = matrix * position * scale * inner_position * inner_scale;
+            tmp_node.node.matrix = matrix * Matrix::translate(position[0], position[1]) *
+                                          Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *
+                                          tmp_node.inner_padding_matrix;
         }
 
         if vertical {
-            if let Some(c) = my_children.get(0) {
-                if !children[0].collapse {
-                    empty_bottom = c.empty_bottom * children[0].weight as f32 * elems_len;
+            if let Some(c) = children.get(0) {
+                if !c.child.collapse {
+                    empty_bottom = c.node.empty_bottom * c.child.weight as f32 * elems_len;
                 }
             }
 
-            if let Some(c) = my_children.last() {
-                if !children.last().unwrap().collapse {
-                    empty_top = c.empty_top * children.last().unwrap().weight as f32 * elems_len;
+            if let Some(c) = children.last() {
+                if !c.child.collapse {
+                    empty_top = c.node.empty_top * c.child.weight as f32 * elems_len;
                 }
             }
 
         } else {
-            if let Some(c) = my_children.get(0) {
-                if !children[0].collapse {
-                    empty_left = c.empty_left * children[0].weight as f32 * elems_len;
+            if let Some(c) = children.get(0) {
+                if !c.child.collapse {
+                    empty_left = c.node.empty_left * c.child.weight as f32 * elems_len;
                 }
             }
 
-            if let Some(c) = my_children.last() {
-                if !children.last().unwrap().collapse {
-                    empty_right = c.empty_right * children.last().unwrap().weight as f32 * elems_len;
+            if let Some(c) = children.last() {
+                if !c.child.collapse {
+                    empty_right = c.node.empty_right * c.child.weight as f32 * elems_len;
                 }
             }
         }
@@ -361,7 +360,7 @@ impl Node {
         Node {
             matrix: matrix,
             state: state,
-            children: my_children,
+            children: children.into_iter().map(|child| child.node).collect(),
             shapes: Vec::new(),
             needs_rebuild: false,
             empty_top: empty_top,
@@ -405,16 +404,19 @@ impl Node {
         result
     }
 
-    /// Sends an event to the node and returns `true` if the event must be propagated to
-    /// the parent.
-    fn send_event(&mut self, event: &Any, child_num: Option<usize>) -> bool {
-        let outcome = self.state.handle_event(event, child_num);
+    /// Sends an event to the node and returns events to propagate to the parent.
+    fn send_event(&mut self, event: Box<Any>, child_num: Option<usize>) -> Vec<Box<Any>> {
+        let outcome = self.state.handle_event(&*event, child_num);
 
         if outcome.refresh_layout {
             self.needs_rebuild = true;
         }
 
-        outcome.propagate_to_parent
+        let mut result = outcome.events_for_parent;
+        if outcome.propagate_to_parent {
+            result.push(event);
+        }
+        result
     }
 
     /// Sends mouse events to the node, and returns a list of events that must be propagated to the
@@ -436,7 +438,7 @@ impl Node {
             }
 
             for (ev, child) in events_for_self {
-                if self.send_event(&*ev, Some(child)) {
+                for ev in self.send_event(ev, Some(child)) {
                     result.push(ev);
                 }
             }
@@ -452,20 +454,20 @@ impl Node {
         // wasn't over the element)
         if hit {
             let ev = Box::new(predefined::MouseEnterEvent) as Box<Any>;
-            if self.send_event(&*ev, None) {
+            for ev in self.send_event(ev, None) {
                 result.push(ev);
             }
 
         } else {
             let ev = Box::new(predefined::MouseLeaveEvent) as Box<Any>;
-            if self.send_event(&*ev, None) {
+            for ev in self.send_event(ev, None) {
                 result.push(ev);
             }
         };
 
         if hit && !new_mouse_down && old_mouse_down {
             let ev = Box::new(predefined::MouseClick) as Box<Any>;
-            if self.send_event(&*ev, None) {
+            for ev in self.send_event(ev, None) {
                 result.push(ev);
             }
         }

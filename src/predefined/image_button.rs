@@ -58,6 +58,7 @@ impl Widget for ImageButton {
             EventOutcome {
                 refresh_layout: true,
                 propagate_to_parent: true,
+                events_for_parent: Vec::new(),
             }
 
         } else if let Some(event) = event.downcast_ref::<MouseLeaveEvent>() {
@@ -66,6 +67,7 @@ impl Widget for ImageButton {
             EventOutcome {
                 refresh_layout: true,
                 propagate_to_parent: true,
+                events_for_parent: Vec::new(),
             }
 
         } else {

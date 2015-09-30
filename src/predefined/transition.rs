@@ -41,8 +41,7 @@ impl<W> Widget for Transition<W> where W: Widget {
 
     #[inline]
     fn needs_rebuild(&self) -> bool {
-        let in_progress = time::precise_time_ns() < self.anim_start_ns + self.anim_duration_ns;
-        in_progress || self.child.needs_rebuild()
+        time::precise_time_ns() < self.anim_start_ns + self.anim_duration_ns
     }
 }
 

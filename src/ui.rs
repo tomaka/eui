@@ -229,7 +229,7 @@ impl Node {
                 let start_offset = match alignment {
                     HorizontalAlignment::Left => -1.0,
                     HorizontalAlignment::Center => -real_len * 0.5,
-                    HorizontalAlignment::Right => -real_len,
+                    HorizontalAlignment::Right => 1.0 - real_len,
                 };
 
                 let mut offset = start_offset;
@@ -302,7 +302,7 @@ impl Node {
                 let start_offset = match alignment {
                     VerticalAlignment::Bottom => -1.0,
                     VerticalAlignment::Center => -real_len * 0.5,
-                    VerticalAlignment::Top => -real_len,
+                    VerticalAlignment::Top => 1.0 - real_len,
                 };
 
                 let mut offset = start_offset;

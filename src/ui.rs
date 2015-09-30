@@ -206,8 +206,8 @@ impl Node {
 
                     let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
                                                            (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
-                                                       1.0 - child.padding_bottom - child.padding_top);
+                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
 
                     offset += child.weight;
 
@@ -244,8 +244,8 @@ impl Node {
 
                     let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
                                                            (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
-                                                       1.0 - child.padding_bottom - child.padding_top);
+                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
 
                     node.matrix = matrix * position * scale * inner_position * inner_scale;
                 }
@@ -317,8 +317,8 @@ impl Node {
 
                     let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
                                                            (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
-                                                       1.0 - child.padding_bottom - child.padding_top);
+                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
 
                     node.matrix = matrix * position * scale * inner_position * inner_scale;
                 }

@@ -172,7 +172,7 @@ impl Node {
                     if b < empty_bottom { empty_bottom = b; }
                     if l < empty_left { empty_left = l; }
 
-                    shape.apply_matrix(&matrix)
+                    shape
                 }).collect()
             },
             _ => Vec::new()
@@ -193,6 +193,9 @@ impl Node {
             },
 
             Layout::HorizontalBar { alignment, children } => {
+                empty_left = 0.0;
+                empty_right = 0.0;
+
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
@@ -234,32 +237,42 @@ impl Node {
                     let len = if child.collapse { (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5) } else { 1.0 };
                     let len = elems_len * child.weight as f32 * len;
 
-                    let position = offset + len * 0.5;
-                    offset += len;
+                    let position = offset + len;
+                    offset += len * 2.0;
                     let position = Matrix::translate(position, 0.0);
                     let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
 
                     let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
                                                            (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_position = if child.collapse {
-                        Matrix::translate(-node.empty_left, 0.0) * inner_position
-                    } else {
-                        inner_position
-                    };
                     let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
                                                        1.0 - child.padding_bottom - child.padding_top);
 
                     node.matrix = matrix * position * scale * inner_position * inner_scale;
                 }
 
+                if let Some(c) = my_children.get(0) {
+                    if !children[0].collapse {
+                        empty_left = c.empty_left * children[0].weight as f32 * elems_len;
+                    }
+                }
+
+                if let Some(c) = my_children.last() {
+                    if !children.last().unwrap().collapse {
+                        empty_right = c.empty_right * children.last().unwrap().weight as f32 * elems_len;
+                    }
+                }
+
                 my_children
             },
 
             Layout::VerticalBar { alignment, children } => {
+                empty_top = 0.0;
+                empty_bottom = 0.0;
+
                 let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
                 let mut offset = 0;
-                let my_children = children.iter().map(|child| {
+                let mut my_children: Vec<Node> = children.iter().map(|child| {
                     let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
                     let position = Matrix::translate(0.0, position);
                     let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
@@ -280,6 +293,47 @@ impl Node {
 
                     node
                 }).collect();
+
+                let real_len = 2.0 * my_children.iter().zip(children.iter()).map(|(node, child)| {
+                    let f = if child.collapse { (1.0 - node.empty_top * 0.5 - node.empty_bottom * 0.5) } else { 1.0 };
+                    elems_len * child.weight as f32 * f
+                }).fold(0.0, |a, b| a + b);
+
+                let start_offset = match alignment {
+                    VerticalAlignment::Bottom => -1.0,
+                    VerticalAlignment::Center => -real_len * 0.5,
+                    VerticalAlignment::Top => -real_len,
+                };
+
+                let mut offset = start_offset;
+                for (node, child) in my_children.iter_mut().zip(children.iter()) {
+                    let len = if child.collapse { (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5) } else { 1.0 };
+                    let len = elems_len * child.weight as f32 * len;
+
+                    let position = offset + len;
+                    offset += len * 2.0;
+                    let position = Matrix::translate(0.0, position);
+                    let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
+
+                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                           (child.padding_bottom - child.padding_top) * 0.5);
+                    let inner_scale = Matrix::scale_wh(1.0 - child.padding_left - child.padding_right,
+                                                       1.0 - child.padding_bottom - child.padding_top);
+
+                    node.matrix = matrix * position * scale * inner_position * inner_scale;
+                }
+
+                if let Some(c) = my_children.get(0) {
+                    if !children[0].collapse {
+                        empty_bottom = c.empty_bottom * children[0].weight as f32 * elems_len;
+                    }
+                }
+
+                if let Some(c) = my_children.last() {
+                    if !children.last().unwrap().collapse {
+                        empty_top = c.empty_top * children.last().unwrap().weight as f32 * elems_len;
+                    }
+                }
 
                 my_children
             },
@@ -328,7 +382,7 @@ impl Node {
         }
 
         for s in &self.shapes {
-            result.push(s.clone());
+            result.push(s.clone().apply_matrix(&self.matrix));
         }
 
         result

@@ -26,6 +26,53 @@ impl Shape {
         }
     }
 
+    /// Returns the bounding box of the shape.
+    ///
+    /// Order: top, right, bottom, left. Each value is between `-1.0` and `1.0`.
+    /// The top will always be greater than the bottom. The right will always be greater than
+    /// the left.
+    pub fn get_bounding_box(&self) -> (f32, f32, f32, f32) {
+        macro_rules! min {
+            ($f:expr, $($o:expr),+) => ({
+                let other = min!($($o),+);
+                if $f < other { $f } else { other }
+            });
+            ($f:expr) => ($f);
+        }
+
+        macro_rules! max {
+            ($f:expr, $($o:expr),+) => ({
+                let other = max!($($o),+);
+                if $f > other { $f } else { other }
+            });
+            ($f:expr) => ($f);
+        }
+
+        let matrix = match self {
+            &Shape::Text { ref matrix, .. } => matrix,
+            &Shape::Image { ref matrix, .. } => matrix,
+        };
+
+        let top_left = *matrix * [-1.0, 1.0, 1.0];
+        let top_left = [top_left[0] / top_left[2], top_left[1] / top_left[2]];
+
+        let top_right = *matrix * [1.0, 1.0, 1.0];
+        let top_right = [top_right[0] / top_right[2], top_right[1] / top_right[2]];
+
+        let bot_left = *matrix * [-1.0, -1.0, 1.0];
+        let bot_left = [bot_left[0] / bot_left[2], bot_left[1] / bot_left[2]];
+
+        let bot_right = *matrix * [1.0, -1.0, 1.0];
+        let bot_right = [bot_right[0] / bot_right[2], bot_right[1] / bot_right[2]];
+
+        (
+            max!(top_left[1], top_right[1], bot_left[1], bot_right[1]),
+            max!(top_left[0], top_right[0], bot_left[0], bot_right[0]),
+            min!(top_left[1], top_right[1], bot_left[1], bot_right[1]),
+            min!(top_left[0], top_right[0], bot_left[0], bot_right[0]),
+        )
+    }
+
     /// Returns true if the point's coordinates hit the shape.
     pub fn hit_test(&self, point: &[f32; 2]) -> bool {
         /// Calculates whether the point is in a rectangle multiplied by a matrix.

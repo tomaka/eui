@@ -170,10 +170,21 @@ impl Default for VerticalAlignment {
 
 pub enum Layout {
     AbsolutePositionned(Vec<(Matrix, Arc<Widget>)>),
+    /// The content of the widget will be split in parts whose size depend on the weight of each
+    /// child. Then the white spaces to the left and right of each child whose `collapse` value is
+    /// `true` will be removed. The `alignment` is taken into account in order to align the
+    /// elements once the children have been collapsed.
     HorizontalBar {
+        /// How the children should be aligned once white spaces have been collapsed.
+        alignment: HorizontalAlignment,
+        /// List of children.
         children: Vec<Child>,
     },
+    /// The same as `HorizontalBar`, but vertical.
     VerticalBar {
+        /// How the children should be aligned once white spaces have been collapsed.
+        alignment: VerticalAlignment,
+        /// List of children.
         children: Vec<Child>,
     },
     Shapes(Vec<Shape>),
@@ -183,6 +194,7 @@ pub struct Child {
     pub child: Arc<Widget>,
     pub weight: i8,
     pub alignment: Alignment,
+    pub collapse: bool,
     pub padding_top: f32,
     pub padding_right: f32,
     pub padding_bottom: f32,

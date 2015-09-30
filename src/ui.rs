@@ -155,17 +155,49 @@ impl Node {
         // TODO: take rotation into account for the height per width
         let my_height_per_width = viewport_height_per_width * matrix.0[1][1] / matrix.0[0][0];
 
-        let mut empty_top = 1.0;
-        let mut empty_right = 1.0;
-        let mut empty_bottom = 1.0;
-        let mut empty_left = 1.0;
+        match state.build_layout(my_height_per_width, alignment) {
+            Layout::AbsolutePositionned(list) => {
+                // TODO: arbitrary alignment
+                let children_alignment = Alignment {
+                    horizontal: HorizontalAlignment::Center,
+                    vertical: VerticalAlignment::Center,
+                };
 
-        let mut state_children = state.build_layout(my_height_per_width, alignment);
+                let new_children: Vec<Node> = list.into_iter().map(|(m, w)| {
+                    Node::new(w, matrix.clone() * m, viewport_height_per_width,
+                              children_alignment)
+                }).collect();
 
-        let shapes = match state_children {
-            Layout::Shapes(ref mut look) => {
-                let shapes = mem::replace(look, Vec::new());
-                shapes.into_iter().map(|shape| {
+                Node {
+                    matrix: matrix,
+                    state: state,
+                    children: new_children,
+                    shapes: Vec::new(),
+                    needs_rebuild: false,
+                    empty_top: 0.0,
+                    empty_right: 0.0,
+                    empty_bottom: 0.0,
+                    empty_left: 0.0,
+                }
+            },
+
+            Layout::HorizontalBar { alignment, children } => {
+                Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
+                                  false, viewport_height_per_width, matrix)
+            },
+
+            Layout::VerticalBar { alignment, children } => {
+                Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
+                                  true, viewport_height_per_width, matrix)
+            },
+
+            Layout::Shapes(shapes) => {
+                let mut empty_top = 1.0;
+                let mut empty_right = 1.0;
+                let mut empty_bottom = 1.0;
+                let mut empty_left = 1.0;
+
+                let shapes = shapes.into_iter().map(|shape| {
                     let (t, r, b, l) = shape.get_bounding_box();
                     let t = 1.0 - t; let r = 1.0 - r; let b = b + 1.0; let l = l + 1.0;
                     if t < empty_top { empty_top = t; }
@@ -174,48 +206,20 @@ impl Node {
                     if l < empty_left { empty_left = l; }
 
                     shape
-                }).collect()
-            },
-            _ => Vec::new()
-        };
+                }).collect::<Vec<_>>();
 
-        let new_children: Vec<Node> = match state_children {
-            Layout::AbsolutePositionned(list) => {
-                // TODO: arbitrary alignment
-                let children_alignment = Alignment {
-                    horizontal: HorizontalAlignment::Center,
-                    vertical: VerticalAlignment::Center,
-                };
-
-                list.into_iter().map(|(m, w)| {
-                    Node::new(w, matrix.clone() * m, viewport_height_per_width,
-                              children_alignment)
-                }).collect()
-            },
-
-            Layout::HorizontalBar { alignment, children } => {
-                return Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
-                                         false, viewport_height_per_width, matrix);
-            },
-
-            Layout::VerticalBar { alignment, children } => {
-                return Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
-                                         true, viewport_height_per_width, matrix);
-            },
-
-            Layout::Shapes(_) => Vec::new(),
-        };
-
-        Node {
-            matrix: matrix,
-            state: state,
-            children: new_children,
-            shapes: shapes,
-            needs_rebuild: false,
-            empty_top: empty_top,
-            empty_right: empty_right,
-            empty_bottom: empty_bottom,
-            empty_left: empty_left,
+                Node {
+                    matrix: matrix,
+                    state: state,
+                    children: Vec::new(),
+                    shapes: shapes,
+                    needs_rebuild: false,
+                    empty_top: empty_top,
+                    empty_right: empty_right,
+                    empty_bottom: empty_bottom,
+                    empty_left: empty_left,
+                }
+            }
         }
     }
 

@@ -134,7 +134,7 @@ impl<S> Ui<S> where S: Widget {
 }
 
 struct Node {
-    /// Absolute matrix (relative to root)
+    /// Local matrix
     matrix: Matrix,
     state: Arc<Widget>,
     children: Vec<Node>,
@@ -164,8 +164,7 @@ impl Node {
                 };
 
                 let new_children: Vec<Node> = list.into_iter().map(|(m, w)| {
-                    Node::new(w, matrix.clone() * m, viewport_height_per_width,
-                              children_alignment)
+                    Node::new(w, m, viewport_height_per_width, children_alignment)
                 }).collect();
 
                 Node {
@@ -267,7 +266,7 @@ impl Node {
             };
 
             let node = Node::new(child.child.clone(),
-                                 matrix * Matrix::translate(position[0], position[1]) *
+                                 Matrix::translate(position[0], position[1]) *
                                     Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
                                  viewport_height_per_width, child.alignment);
 
@@ -323,9 +322,9 @@ impl Node {
         for tmp_node in children.iter_mut() {
             let position = offset + tmp_node.actual_content_percent;
             offset += tmp_node.actual_content_percent * 2.0;
-            let position = if vertical { [0.0, position] } else { [position, 0.0] };
+            let position = if vertical { println!("{:?}", position); [0.0, position] } else { [position, 0.0] };
 
-            tmp_node.node.matrix = matrix * Matrix::translate(position[0], position[1]) *
+            tmp_node.node.matrix = Matrix::translate(position[0], position[1]) *
                                           Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *
                                           tmp_node.inner_padding_matrix;
         }
@@ -394,7 +393,7 @@ impl Node {
         let mut result = Vec::new();
 
         for c in &self.children {
-            for s in c.build_shapes() { result.push(s); }
+            for s in c.build_shapes() { result.push(s.apply_matrix(&self.matrix)); }
         }
 
         for s in &self.shapes {

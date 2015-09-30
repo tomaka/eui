@@ -1,3 +1,4 @@
+pub use self::empty::Empty;
 pub use self::image_button::ImageButton;
 pub use self::image::Image;
 pub use self::label::Label;
@@ -11,6 +12,7 @@ pub struct MouseLeaveEvent;
 #[derive(Copy, Clone, Debug)]
 pub struct MouseClick;
 
+mod empty;
 mod image_button;
 mod image;
 mod label;

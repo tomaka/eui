@@ -35,8 +35,7 @@ impl<S> Ui<S> where S: Widget {
             vertical: VerticalAlignment::Center,
         };
 
-        let main_node = Node::new(state.clone() as Arc<_>, Matrix::identity(),
-                                  viewport_height_per_width, alignment);
+        let main_node = Node::new(state.clone() as Arc<_>, viewport_height_per_width, alignment);
 
         Ui {
             viewport_height_per_width: Mutex::new(viewport_height_per_width),
@@ -57,8 +56,7 @@ impl<S> Ui<S> where S: Widget {
             vertical: VerticalAlignment::Center,
         };
 
-        *self.main_node.lock().unwrap() = Node::new(self.widget.clone(), Matrix::identity(),
-                                                    viewport, alignment);
+        *self.main_node.lock().unwrap() = Node::new(self.widget.clone(), viewport, alignment);
 
         // TODO: update mouse?
     }
@@ -82,8 +80,7 @@ impl<S> Ui<S> where S: Widget {
                 vertical: VerticalAlignment::Center,
             };
 
-            *main_node = Node::new(self.widget.clone(), Matrix::identity(),
-                                   viewport, alignment);
+            *main_node = Node::new(self.widget.clone(), viewport, alignment);
         }
 
         main_node.build_shapes()
@@ -136,9 +133,8 @@ impl<S> Ui<S> where S: Widget {
 
 struct Node {
     /// Local matrix
-    matrix: Matrix,
     state: Arc<Widget>,
-    children: Vec<Node>,
+    children: Vec<(Matrix, Node)>,
     shapes: Vec<Shape>,
     needs_rebuild: bool,
 
@@ -150,12 +146,7 @@ struct Node {
 }
 
 impl Node {
-    fn new(state: Arc<Widget>, matrix: Matrix, parent_viewport_height_per_width: f32,
-           alignment: Alignment) -> Node
-    {
-        // TODO: take rotation into account for the height per width
-        let my_height_per_width = parent_viewport_height_per_width * matrix.0[1][1] / matrix.0[0][0];
-
+    fn new(state: Arc<Widget>, my_height_per_width: f32, alignment: Alignment) -> Node {
         match state.build_layout(my_height_per_width, alignment) {
             Layout::AbsolutePositionned(list) => {
                 // TODO: arbitrary alignment
@@ -164,12 +155,11 @@ impl Node {
                     vertical: VerticalAlignment::Center,
                 };
 
-                let new_children: Vec<Node> = list.into_iter().map(|(m, w)| {
-                    Node::new(w, m, my_height_per_width, children_alignment)
+                let new_children: Vec<(Matrix, Node)> = list.into_iter().map(|(m, w)| {
+                    (m, Node::new(w, my_height_per_width, children_alignment))
                 }).collect();
 
                 Node {
-                    matrix: matrix,
                     state: state,
                     children: new_children,
                     shapes: Vec::new(),
@@ -183,12 +173,12 @@ impl Node {
 
             Layout::HorizontalBar { alignment, children, vertical_align } => {
                 Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
-                                  false, my_height_per_width, matrix, vertical_align)
+                                  false, my_height_per_width, vertical_align)
             },
 
             Layout::VerticalBar { alignment, children, horizontal_align } => {
                 Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
-                                  true, my_height_per_width, matrix, horizontal_align)
+                                  true, my_height_per_width, horizontal_align)
             },
 
             Layout::Shapes(shapes) => {
@@ -209,7 +199,6 @@ impl Node {
                 }).collect::<Vec<_>>();
 
                 Node {
-                    matrix: matrix,
                     state: state,
                     children: Vec::new(),
                     shapes: shapes,
@@ -224,7 +213,7 @@ impl Node {
     }
 
     fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
-                   my_height_per_width: f32, matrix: Matrix, other_align: bool) -> Node
+                   my_height_per_width: f32, other_align: bool) -> Node
     {
         let mut empty_top = if vertical { 0.0 } else { 1.0 };
         let mut empty_right = if vertical { 1.0 } else { 0.0 };
@@ -238,6 +227,7 @@ impl Node {
         struct TempNode {
             node: Node,
             child: Child,
+            matrix: Matrix,
             position: [f32; 2],
             scale: [f32; 2],
             actual_content_percent: f32,
@@ -268,10 +258,8 @@ impl Node {
                 inner_position * inner_scale
             };
 
-            let node = Node::new(child.child.clone(),
-                                 Matrix::translate(position[0], position[1]) *
-                                    Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
-                                 my_height_per_width, child.alignment);
+            let node = Node::new(child.child.clone(), my_height_per_width * scale[1] / scale[0],
+                                 child.alignment);
 
             // percent of the child that actually contains stuff, relative to the current node
             let actual_content_percent = elems_len * child.weight as f32 * if child.collapse {
@@ -309,6 +297,7 @@ impl Node {
             TempNode {
                 node: node,
                 child: child,
+                matrix: Matrix::translate(position[0], position[1]) * Matrix::scale_wh(scale[0], scale[1]) * inner_padding_matrix,
                 position: position,
                 scale: scale,
                 actual_content_percent: actual_content_percent,
@@ -362,7 +351,7 @@ impl Node {
         }
 
         for tmp_node in children.iter_mut() {
-            tmp_node.node.matrix = Matrix::translate(tmp_node.position[0], tmp_node.position[1]) *
+            tmp_node.matrix = Matrix::translate(tmp_node.position[0], tmp_node.position[1]) *
                                           Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *
                                           tmp_node.inner_padding_matrix;
         }
@@ -395,9 +384,8 @@ impl Node {
         }
 
         Node {
-            matrix: matrix,
             state: state,
-            children: children.into_iter().map(|child| child.node).collect(),
+            children: children.into_iter().map(|child| (child.matrix, child.node)).collect(),
             shapes: Vec::new(),
             needs_rebuild: false,
             empty_top: empty_top,
@@ -418,7 +406,7 @@ impl Node {
             return true;
         }
 
-        for child in &mut self.children {
+        for &mut (_, ref mut child) in &mut self.children {
             if child.needs_rebuild() {
                 return true;
             }
@@ -430,12 +418,12 @@ impl Node {
     fn build_shapes(&self) -> Vec<Shape> {
         let mut result = Vec::new();
 
-        for c in &self.children {
-            for s in c.build_shapes() { result.push(s.apply_matrix(&self.matrix)); }
+        for &(ref m, ref c) in &self.children {
+            for s in c.build_shapes() { result.push(s.apply_matrix(m)); }
         }
 
         for s in &self.shapes {
-            result.push(s.clone().apply_matrix(&self.matrix));
+            result.push(s.clone());
         }
 
         result
@@ -458,17 +446,16 @@ impl Node {
 
     /// Sends mouse events to the node, and returns a list of events that must be propagated to the
     /// parent.
-    fn mouse_update(&mut self, mouse: Option<[f32; 2]>, parent_matrix: &Matrix,
-                    new_mouse_down: bool, old_mouse_down: bool)
-                    -> Vec<Box<Any>>
+    fn mouse_update(&mut self, mouse: Option<[f32; 2]>, matrix: &Matrix, new_mouse_down: bool,
+                    old_mouse_down: bool) -> Vec<Box<Any>>
     {
         let mut result = Vec::new();
 
         {
             let mut events_for_self = Vec::new();
 
-            for (num, child) in self.children.iter_mut().enumerate() {
-                for ev in child.mouse_update(mouse, &(*parent_matrix * self.matrix), new_mouse_down,
+            for (num, &mut (ref child_matrix, ref mut child)) in self.children.iter_mut().enumerate() {
+                for ev in child.mouse_update(mouse, &(*matrix * *child_matrix), new_mouse_down,
                                              old_mouse_down)
                 {
                     events_for_self.push((ev, num));
@@ -485,7 +472,7 @@ impl Node {
         }
 
         let hit = if let Some(mouse) = mouse {
-            self.shapes.iter().find(|s| (*s).clone().apply_matrix(&self.matrix).apply_matrix(parent_matrix).hit_test(&mouse)).is_some()
+            self.shapes.iter().find(|s| (*s).clone().apply_matrix(matrix).hit_test(&mouse)).is_some()
         } else {
             false
         };

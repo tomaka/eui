@@ -286,11 +286,11 @@ impl Node {
             offset += child.weight;
 
             if vertical {
-                if node.empty_left < empty_left { empty_left = node.empty_left }
-                if node.empty_right < empty_right { empty_right = node.empty_right }
+                if node.empty_left - child.padding_left < empty_left { empty_left = node.empty_left - child.padding_left; }
+                if node.empty_right - child.padding_right < empty_right { empty_right = node.empty_right - child.padding_right; }
             } else {
-                if node.empty_top < empty_top { empty_top = node.empty_top }
-                if node.empty_bottom < empty_bottom { empty_bottom = node.empty_bottom }
+                if node.empty_top - child.padding_top < empty_top { empty_top = node.empty_top - child.padding_top; }
+                if node.empty_bottom - child.padding_bottom < empty_bottom { empty_bottom = node.empty_bottom - child.padding_bottom; }
             }
 
             TempNode {
@@ -334,26 +334,26 @@ impl Node {
         if vertical {
             if let Some(c) = children.get(0) {
                 if !c.child.collapse {
-                    empty_bottom = c.node.empty_bottom * c.child.weight as f32 * elems_len;
+                    empty_bottom = (c.node.empty_bottom - c.child.padding_bottom) * c.child.weight as f32 * elems_len;
                 }
             }
 
             if let Some(c) = children.last() {
                 if !c.child.collapse {
-                    empty_top = c.node.empty_top * c.child.weight as f32 * elems_len;
+                    empty_top = (c.node.empty_top - c.child.padding_top) * c.child.weight as f32 * elems_len;
                 }
             }
 
         } else {
             if let Some(c) = children.get(0) {
                 if !c.child.collapse {
-                    empty_left = c.node.empty_left * c.child.weight as f32 * elems_len;
+                    empty_left = (c.node.empty_left - c.child.padding_left) * c.child.weight as f32 * elems_len;
                 }
             }
 
             if let Some(c) = children.last() {
                 if !c.child.collapse {
-                    empty_right = c.node.empty_right * c.child.weight as f32 * elems_len;
+                    empty_right = (c.node.empty_right - c.child.padding_right) * c.child.weight as f32 * elems_len;
                 }
             }
         }

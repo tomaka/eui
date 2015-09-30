@@ -273,9 +273,11 @@ impl Node {
             // percent of the child that actually contains stuff, relative to the current node
             let actual_content_percent = elems_len * child.weight as f32 * if child.collapse {
                 if vertical {
-                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
+                    (1.0 + child.padding_top * 0.5 + child.padding_bottom * 0.5 -
+                        node.empty_bottom * 0.5 - node.empty_top * 0.5)
                 } else {
-                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
+                    (1.0 + child.padding_left * 0.5 + child.padding_right * 0.5 -
+                        node.empty_left * 0.5 - node.empty_right * 0.5)
                 }
             } else {
                 1.0
@@ -322,7 +324,7 @@ impl Node {
         for tmp_node in children.iter_mut() {
             let position = offset + tmp_node.actual_content_percent;
             offset += tmp_node.actual_content_percent * 2.0;
-            let position = if vertical { println!("{:?}", position); [0.0, position] } else { [position, 0.0] };
+            let position = if vertical { [0.0, position] } else { [position, 0.0] };
 
             tmp_node.node.matrix = Matrix::translate(position[0], position[1]) *
                                           Matrix::scale_wh(tmp_node.scale[0], tmp_node.scale[1]) *

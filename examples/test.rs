@@ -1,6 +1,6 @@
 extern crate eui;
 
-use std::sync::Arc;
+/*use std::sync::Arc;
 
 struct SpellIcon {
     button: eui::predefined::Button
@@ -20,11 +20,11 @@ impl eui::Widget for SpellsBar {
     fn build_layout(&self) -> eui::Layout {
         eui::Layout::HorizontalBar(self.icons.iter().map(|s| s.clone() as Arc<_>).collect())
     }
-}
+}*/
 
 fn main() {
-    let bar = SpellsBar { icons: vec![Arc::new(SpellIcon { button: eui::predefined::Button::new("normal", "hovered") })] };
+    /*let bar = SpellsBar { icons: vec![Arc::new(SpellIcon { button: eui::predefined::Button::new("normal", "hovered") })] };
     let ui = eui::Ui::new(bar, 1.0);
 
-    println!("{:?}", ui.draw());
+    println!("{:?}", ui.draw());*/
 }

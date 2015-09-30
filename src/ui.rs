@@ -215,6 +215,10 @@ impl Node {
     fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
                    my_height_per_width: f32, other_align: bool) -> Node
     {
+        // In this function, the word "flow" designates the dimension that is being operated and
+        // "perpendicular" designates the other dimension. If `vertical` is true, then the flow
+        // is the y dimension and the perpendicular dimension is x.
+
         // inverse of the sum of the weight of all children
         let weight_sum_inverse = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
 
@@ -232,8 +236,35 @@ impl Node {
             (child, node)
         }).collect();
 
-        // percentage of the widget (in the direction of the flow, ie. vertical if `vertical` is
-        // true, otherwise horizontal) that is effectively filled with content
+        // if `Some`, then the effective content of the perpendicular dimension must be this
+        // given percentage
+        let required_effective_perp_percentage = if other_align {
+            Some(1.0 / children.iter().map(|&(ref child, ref node)| {
+                let flow_percent = child.weight as f32 * weight_sum_inverse * 0.5 * (2.0 - if child.collapse {
+                    if vertical {
+                        node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                    } else {
+                        node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                    }
+                } else {
+                    0.0
+                });
+
+                let perp_percent = 0.5 * (2.0 - if vertical {
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                } else {
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                });
+
+                flow_percent / perp_percent
+            }).fold(0.0, |a, b| a + b))
+
+        } else {
+            None
+        };
+
+        // percentage of the widget (in the direction of the flow) that is effectively filled
+        // with content
         let flow_effective_percentage = children.iter().map(|&(ref child, ref node)| {
             let flow_empty = if child.collapse {
                 if vertical {
@@ -261,33 +292,6 @@ impl Node {
                 HorizontalAlignment::Center => -flow_effective_percentage,
                 HorizontalAlignment::Right => 1.0 - flow_effective_percentage * 2.0,
             }
-        };
-
-        // if `Some`, then the effective content of the perpendicular dimension must be this
-        // given percentage
-        let required_effective_perp_percentage = if other_align {
-            Some(1.0 / children.iter().map(|&(ref child, ref node)| {
-                let flow_percent = child.weight as f32 * weight_sum_inverse * 0.5 * (2.0 - if child.collapse {
-                    if vertical {
-                        node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
-                    } else {
-                        node.empty_left + node.empty_right - child.padding_left - child.padding_right
-                    }
-                } else {
-                    0.0
-                });
-
-                let perp_percent = 0.5 * (2.0 - if vertical {
-                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
-                } else {
-                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
-                });
-
-                flow_percent / perp_percent
-            }).fold(0.0, |a, b| a + b))
-
-        } else {
-            None
         };
 
 
@@ -370,10 +374,19 @@ impl Node {
             };
 
             // matrix containing the scale of this child
-            let scale_matrix = if vertical {
-                Matrix::scale_wh(1.0, child.weight as f32 * weight_sum_inverse)
+            let scale_matrix = if let Some(req) = required_effective_perp_percentage {
+                let ratio = req / effective_perp_percentage;
+                if vertical {
+                    Matrix::scale_wh(ratio, ratio * child.weight as f32 * weight_sum_inverse)
+                } else {
+                    Matrix::scale_wh(ratio * child.weight as f32 * weight_sum_inverse, ratio)
+                }
             } else {
-                Matrix::scale_wh(child.weight as f32 * weight_sum_inverse, 1.0)
+                if vertical {
+                    Matrix::scale_wh(1.0, child.weight as f32 * weight_sum_inverse)
+                } else {
+                    Matrix::scale_wh(child.weight as f32 * weight_sum_inverse, 1.0)
+                }
             };
 
             // the total matrix for this child

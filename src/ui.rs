@@ -8,6 +8,7 @@ use std::mem;
 use predefined;
 
 use Alignment;
+use Child;
 use HorizontalAlignment;
 use Layout;
 use Matrix;
@@ -193,149 +194,13 @@ impl Node {
             },
 
             Layout::HorizontalBar { alignment, children } => {
-                empty_left = 0.0;
-                empty_right = 0.0;
-
-                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
-
-                let mut offset = 0;
-                let mut my_children: Vec<Node> = children.iter().map(|child| {
-                    let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
-                    let position = Matrix::translate(position, 0.0);
-                    let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
-
-                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                           (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-                    offset += child.weight;
-
-                    let node = Node::new(child.child.clone(),
-                                         matrix * position * scale * inner_position * inner_scale,
-                                         viewport_height_per_width, child.alignment);
-
-                    if node.empty_top < empty_top { empty_top = node.empty_top }
-                    if node.empty_bottom < empty_bottom { empty_bottom = node.empty_bottom }
-
-                    node
-                }).collect();
-
-                let real_len = 2.0 * my_children.iter().zip(children.iter()).map(|(node, child)| {
-                    let f = if child.collapse { (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5) } else { 1.0 };
-                    elems_len * child.weight as f32 * f
-                }).fold(0.0, |a, b| a + b);
-
-                let start_offset = match alignment {
-                    HorizontalAlignment::Left => -1.0,
-                    HorizontalAlignment::Center => -real_len * 0.5,
-                    HorizontalAlignment::Right => 1.0 - real_len,
-                };
-
-                let mut offset = start_offset;
-                for (node, child) in my_children.iter_mut().zip(children.iter()) {
-                    let len = if child.collapse { (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5) } else { 1.0 };
-                    let len = elems_len * child.weight as f32 * len;
-
-                    let position = offset + len;
-                    offset += len * 2.0;
-                    let position = Matrix::translate(position, 0.0);
-                    let scale = Matrix::scale_wh(child.weight as f32 * elems_len, 1.0);
-
-                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                           (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-                    node.matrix = matrix * position * scale * inner_position * inner_scale;
-                }
-
-                if let Some(c) = my_children.get(0) {
-                    if !children[0].collapse {
-                        empty_left = c.empty_left * children[0].weight as f32 * elems_len;
-                    }
-                }
-
-                if let Some(c) = my_children.last() {
-                    if !children.last().unwrap().collapse {
-                        empty_right = c.empty_right * children.last().unwrap().weight as f32 * elems_len;
-                    }
-                }
-
-                my_children
+                return Node::with_layout(state, children, Alignment { horizontal: alignment, .. Default::default() },
+                                         false, viewport_height_per_width, matrix);
             },
 
             Layout::VerticalBar { alignment, children } => {
-                empty_top = 0.0;
-                empty_bottom = 0.0;
-
-                let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
-
-                let mut offset = 0;
-                let mut my_children: Vec<Node> = children.iter().map(|child| {
-                    let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
-                    let position = Matrix::translate(0.0, position);
-                    let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
-
-                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                           (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-                    offset += child.weight;
-
-                    let node = Node::new(child.child.clone(),
-                                         matrix * position * scale * inner_position * inner_scale,
-                                         viewport_height_per_width, child.alignment);
-
-                    if node.empty_left < empty_left { empty_left = node.empty_left }
-                    if node.empty_right < empty_right { empty_right = node.empty_right }
-
-                    node
-                }).collect();
-
-                let real_len = 2.0 * my_children.iter().zip(children.iter()).map(|(node, child)| {
-                    let f = if child.collapse { (1.0 - node.empty_top * 0.5 - node.empty_bottom * 0.5) } else { 1.0 };
-                    elems_len * child.weight as f32 * f
-                }).fold(0.0, |a, b| a + b);
-
-                let start_offset = match alignment {
-                    VerticalAlignment::Bottom => -1.0,
-                    VerticalAlignment::Center => -real_len * 0.5,
-                    VerticalAlignment::Top => 1.0 - real_len,
-                };
-
-                let mut offset = start_offset;
-                for (node, child) in my_children.iter_mut().zip(children.iter()) {
-                    let len = if child.collapse { (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5) } else { 1.0 };
-                    let len = elems_len * child.weight as f32 * len;
-
-                    let position = offset + len;
-                    offset += len * 2.0;
-                    let position = Matrix::translate(0.0, position);
-                    let scale = Matrix::scale_wh(1.0, child.weight as f32 * elems_len);
-
-                    let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
-                                                           (child.padding_bottom - child.padding_top) * 0.5);
-                    let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
-                                                       1.0 - (child.padding_bottom + child.padding_top) * 0.5);
-
-                    node.matrix = matrix * position * scale * inner_position * inner_scale;
-                }
-
-                if let Some(c) = my_children.get(0) {
-                    if !children[0].collapse {
-                        empty_bottom = c.empty_bottom * children[0].weight as f32 * elems_len;
-                    }
-                }
-
-                if let Some(c) = my_children.last() {
-                    if !children.last().unwrap().collapse {
-                        empty_top = c.empty_top * children.last().unwrap().weight as f32 * elems_len;
-                    }
-                }
-
-                my_children
+                return Node::with_layout(state, children, Alignment { vertical: alignment, .. Default::default() },
+                                         true, viewport_height_per_width, matrix);
             },
 
             Layout::Shapes(_) => Vec::new(),
@@ -346,6 +211,154 @@ impl Node {
             state: state,
             children: new_children,
             shapes: shapes,
+            needs_rebuild: false,
+            empty_top: empty_top,
+            empty_right: empty_right,
+            empty_bottom: empty_bottom,
+            empty_left: empty_left,
+        }
+    }
+
+    fn with_layout(state: Arc<Widget>, children: Vec<Child>, alignment: Alignment, vertical: bool,
+                   viewport_height_per_width: f32, matrix: Matrix) -> Node
+    {
+        let mut empty_top = if vertical { 0.0 } else { 1.0 };
+        let mut empty_right = if vertical { 1.0 } else { 0.0 };
+        let mut empty_bottom = if vertical { 0.0 } else { 1.0 };
+        let mut empty_left = if vertical { 1.0 } else { 0.0 };
+
+        // sum of the weight of all children
+        let elems_len = 1.0 / children.iter().fold(0, |a, b| a + b.weight) as f32;
+
+        let mut offset = 0;
+        let mut my_children: Vec<Node> = children.iter().map(|child| {
+            let position = (2.0 * offset as f32 + child.weight as f32) * elems_len - 1.0;
+            let position = if vertical {
+                Matrix::translate(0.0, position)
+            } else {
+                Matrix::translate(position, 0.0)
+            };
+            let scale = if vertical {
+                Matrix::scale_wh(1.0, child.weight as f32 * elems_len)
+            } else {
+                Matrix::scale_wh(child.weight as f32 * elems_len, 1.0)
+            };
+
+            let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                   (child.padding_bottom - child.padding_top) * 0.5);
+            let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                               1.0 - (child.padding_bottom + child.padding_top) * 0.5);
+
+            offset += child.weight;
+
+            let node = Node::new(child.child.clone(),
+                                 matrix * position * scale * inner_position * inner_scale,
+                                 viewport_height_per_width, child.alignment);
+
+            if vertical {
+                if node.empty_left < empty_left { empty_left = node.empty_left }
+                if node.empty_right < empty_right { empty_right = node.empty_right }
+            } else {
+                if node.empty_top < empty_top { empty_top = node.empty_top }
+                if node.empty_bottom < empty_bottom { empty_bottom = node.empty_bottom }
+            }
+
+            node
+        }).collect();
+
+        let real_len = 2.0 * my_children.iter().zip(children.iter()).map(|(node, child)| {
+            let f = if child.collapse {
+                if vertical {
+                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
+                } else {
+                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
+                }
+            } else {
+                1.0
+            };
+            elems_len * child.weight as f32 * f
+        }).fold(0.0, |a, b| a + b);
+
+        let start_offset = if vertical {
+            match alignment.vertical {
+                VerticalAlignment::Bottom => -1.0,
+                VerticalAlignment::Center => -real_len * 0.5,
+                VerticalAlignment::Top => 1.0 - real_len,
+            }
+        } else {
+            match alignment.horizontal {
+                HorizontalAlignment::Left => -1.0,
+                HorizontalAlignment::Center => -real_len * 0.5,
+                HorizontalAlignment::Right => 1.0 - real_len,
+            }
+        };
+
+        let mut offset = start_offset;
+        for (node, child) in my_children.iter_mut().zip(children.iter()) {
+            let len = if child.collapse {
+                if vertical {
+                    (1.0 - node.empty_bottom * 0.5 - node.empty_top * 0.5)
+                } else {
+                    (1.0 - node.empty_left * 0.5 - node.empty_right * 0.5)
+                }
+            } else {
+                1.0
+            };
+            let len = elems_len * child.weight as f32 * len;
+
+            let position = offset + len;
+            offset += len * 2.0;
+            let position = if vertical {
+                Matrix::translate(0.0, position)
+            } else {
+                Matrix::translate(position, 0.0)
+            };
+            let scale = if vertical {
+                Matrix::scale_wh(1.0, child.weight as f32 * elems_len)
+            } else {
+                Matrix::scale_wh(child.weight as f32 * elems_len, 1.0)
+            };
+
+            let inner_position = Matrix::translate((child.padding_left - child.padding_right) * 0.5,
+                                                   (child.padding_bottom - child.padding_top) * 0.5);
+            let inner_scale = Matrix::scale_wh(1.0 - (child.padding_left + child.padding_right) * 0.5,
+                                               1.0 - (child.padding_bottom + child.padding_top) * 0.5);
+
+            node.matrix = matrix * position * scale * inner_position * inner_scale;
+        }
+
+        if vertical {
+            if let Some(c) = my_children.get(0) {
+                if !children[0].collapse {
+                    empty_bottom = c.empty_bottom * children[0].weight as f32 * elems_len;
+                }
+            }
+
+            if let Some(c) = my_children.last() {
+                if !children.last().unwrap().collapse {
+                    empty_top = c.empty_top * children.last().unwrap().weight as f32 * elems_len;
+                }
+            }
+
+        } else {
+            if let Some(c) = my_children.get(0) {
+                if !children[0].collapse {
+                    empty_left = c.empty_left * children[0].weight as f32 * elems_len;
+                }
+            }
+
+            if let Some(c) = my_children.last() {
+                if !children.last().unwrap().collapse {
+                    empty_right = c.empty_right * children.last().unwrap().weight as f32 * elems_len;
+                }
+            }
+        }
+
+        Node {
+            matrix: matrix,
+            state: state,
+            children: my_children,
+            shapes: Vec::new(),
             needs_rebuild: false,
             empty_top: empty_top,
             empty_right: empty_right,

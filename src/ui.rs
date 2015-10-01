@@ -239,7 +239,7 @@ impl Node {
         // if `Some`, then the effective content of the perpendicular dimension must be this
         // given percentage
         let required_effective_perp_percentage = if other_align {
-            Some(1.0 / children.iter().map(|&(ref child, ref node)| {
+            let val = 1.0 / children.iter().map(|&(ref child, ref node)| {
                 let flow_percent = child.weight as f32 * weight_sum_inverse * 0.5 * (2.0 - if child.collapse {
                     if vertical {
                         node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
@@ -257,7 +257,10 @@ impl Node {
                 });
 
                 flow_percent / perp_percent
-            }).fold(0.0, |a, b| a + b))
+            }).fold(0.0, |a, b| a + b);
+
+            let val = if val >= 1.0 { 1.0 } else { val };
+            Some(val)
 
         } else {
             None
@@ -363,8 +366,16 @@ impl Node {
             }
 
             // position of the center of this child in the flow
-            let flow_center_position = flow_current_border_position + flow_percent;     // * 2 / 2
-            flow_current_border_position += flow_percent * 2.0;
+            let flow_center_position = if let Some(req) = required_effective_perp_percentage {
+                let ratio = req / effective_perp_percentage;
+                let flow_center_position = flow_current_border_position + flow_percent * ratio;
+                flow_current_border_position += flow_percent * ratio * 2.0;
+                flow_center_position
+            } else {
+                let flow_center_position = flow_current_border_position + flow_percent;
+                flow_current_border_position += flow_percent * 2.0;
+                flow_center_position
+            };
 
             // matrix containing the position of this child
             let position_matrix = if vertical {

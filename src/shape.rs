@@ -5,7 +5,7 @@ use Matrix;
 /// The meaning of the matrix depends on the context in which the shape is manipulated. When
 /// returned by `build_layout`, the matrix is relative to the widget. When returned by `draw`,
 /// the matrix is absolute (ie. relative to the viewport).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Shape {
     Text {
         matrix: Matrix,

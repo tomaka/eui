@@ -360,29 +360,29 @@ impl Node {
 
             // adjusting the `my_empty_*` variables
             if vertical {
-                if node.empty_left - child.padding_left < my_empty_left { my_empty_left = node.empty_left - child.padding_left; }
-                if node.empty_right - child.padding_right < my_empty_right { my_empty_right = node.empty_right - child.padding_right; }
+                if (node.empty_left - child.padding_left) / scale_ratio < my_empty_left { my_empty_left = (node.empty_left - child.padding_left) / scale_ratio; }
+                if (node.empty_right - child.padding_right) / scale_ratio < my_empty_right { my_empty_right = (node.empty_right - child.padding_right) / scale_ratio; }
                 if child_num == 0 {
                     if !child.collapse {
-                        my_empty_bottom = (node.empty_bottom - child.padding_bottom) * child.weight as f32 * weight_sum_inverse;
+                        my_empty_bottom = (-1.0 - flow_start_border_position) + (node.empty_bottom - child.padding_bottom) * child.weight as f32 * weight_sum_inverse / scale_ratio;
                     }
                 }
                 if child_num == num_children - 1 {
                     if !child.collapse {
-                        my_empty_top = (node.empty_top - child.padding_top) * child.weight as f32 * weight_sum_inverse;
+                        my_empty_top = (1.0 - (flow_start_border_position + flow_effective_percentage * 2.0)) + (node.empty_top - child.padding_top) * child.weight as f32 * weight_sum_inverse / scale_ratio;
                     }
                 }
             } else {
-                if node.empty_top - child.padding_top < my_empty_top { my_empty_top = node.empty_top - child.padding_top; }
-                if node.empty_bottom - child.padding_bottom < my_empty_bottom { my_empty_bottom = node.empty_bottom - child.padding_bottom; }
+                if (node.empty_top - child.padding_top) / scale_ratio < my_empty_top { my_empty_top = (node.empty_top - child.padding_top) / scale_ratio; }
+                if (node.empty_bottom - child.padding_bottom) / scale_ratio < my_empty_bottom { my_empty_bottom = (node.empty_bottom - child.padding_bottom) / scale_ratio; }
                 if child_num == 0 {
                     if !child.collapse {
-                        my_empty_left = (node.empty_left - child.padding_left) * child.weight as f32 * weight_sum_inverse;
+                        my_empty_left = (-1.0 - flow_start_border_position) + (node.empty_left - child.padding_left) * child.weight as f32 * weight_sum_inverse / scale_ratio;
                     }
                 }
                 if child_num == num_children - 1 {
                     if !child.collapse {
-                        my_empty_right = (node.empty_right - child.padding_right) * child.weight as f32 * weight_sum_inverse;
+                        my_empty_right = (1.0 - (flow_start_border_position + flow_effective_percentage * 2.0)) + (node.empty_right - child.padding_right) * child.weight as f32 * weight_sum_inverse / scale_ratio;
                     }
                 }
             }

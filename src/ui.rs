@@ -156,7 +156,21 @@ impl Node {
                 };
 
                 let new_children: Vec<(Matrix, Node)> = list.into_iter().map(|(m, w)| {
-                    (m, Node::new(w, my_height_per_width, children_alignment))
+                    let origin = m * [0.0, 0.0, 1.0];
+                    let origin = [origin[0] / origin[2], origin[1] / origin[2]];
+
+                    let height = m * [0.0, 1.0, 1.0];
+                    let height = [height[0] / height[2], height[1] / height[2]];
+                    let height = [height[0] - origin[0], height[1] - origin[1]];
+                    let height = (height[0] * height[0] + height[1] * height[1]).sqrt();
+
+                    let width = m * [1.0, 0.0, 1.0];
+                    let width = [width[0] / width[2], width[1] / width[2]];
+                    let width = [width[0] - origin[0], width[1] - origin[1]];
+                    let width = (width[0] * width[0] + width[1] * width[1]).sqrt();
+
+                    let child_width_per_height = my_height_per_width * height / width;
+                    (m, Node::new(w, child_width_per_height, children_alignment))
                 }).collect();
 
                 Node {

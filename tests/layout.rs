@@ -52,3 +52,38 @@ fn horizontal_split_two() {
                &[eui::Shape::Image { name: String::new(), matrix: eui::Matrix::translate(-0.5, 0.0) * eui::Matrix::scale_wh(0.5, 1.0) },
                  eui::Shape::Image { name: String::new(), matrix: eui::Matrix::translate(0.5, 0.0) * eui::Matrix::scale_wh(0.5, 1.0) }]);
 }
+
+#[test]
+fn horizontal_collapse() {
+    struct HalfWidthWidget;
+    impl eui::Widget for HalfWidthWidget {
+        fn build_layout(&self, _: f32, _: eui::Alignment) -> eui::Layout {
+            let s = eui::Shape::Image { name: String::new(), matrix: eui::Matrix::scale_wh(0.5, 1.0) };
+            eui::Layout::Shapes(vec![s])
+        }
+    }
+
+    struct TestedWidget;
+    impl eui::Widget for TestedWidget {
+        fn build_layout(&self, _: f32, _: eui::Alignment) -> eui::Layout {
+            eui::Layout::HorizontalBar {
+                alignment: eui::HorizontalAlignment::Center,
+                vertical_align: false,
+                children: vec![
+                    eui::Child { child: Arc::new(HalfWidthWidget), weight: 1, collapse: true,
+                                 alignment: Default::default(), padding_top: 0.0, padding_left: 0.0,
+                                 padding_bottom: 0.0, padding_right: 0.0 },
+                    eui::Child { child: Arc::new(HalfWidthWidget), weight: 1, collapse: true,
+                                 alignment: Default::default(), padding_top: 0.0, padding_left: 0.0,
+                                 padding_bottom: 0.0, padding_right: 0.0 },
+                ],
+            }
+        }
+    }
+
+    let ui = eui::Ui::new(TestedWidget, 1.0);
+    let shapes = ui.draw();
+    assert_eq!(shapes,
+               &[eui::Shape::Image { name: String::new(), matrix: eui::Matrix::translate(-0.25, 0.0) * eui::Matrix::scale_wh(0.25, 1.0) },
+                 eui::Shape::Image { name: String::new(), matrix: eui::Matrix::translate(0.25, 0.0) * eui::Matrix::scale_wh(0.25, 1.0) }]);
+}

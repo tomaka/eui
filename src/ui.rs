@@ -269,6 +269,21 @@ impl Node {
         // percentage of the widget (in the direction of the flow) that is effectively filled
         // with content
         let flow_effective_percentage = children.iter().map(|&(ref child, ref node)| {
+            // the ratio to multiply the scale of the node with
+            let scale_ratio = if let Some(req_perp) = required_effective_perp_percentage {
+                // the percentage of the perpendicular dimension that is effectively filled with
+                // content
+                let effective_perp_percentage = 0.5 * (2.0 - if vertical {
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                } else {
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                });
+
+                req_perp / effective_perp_percentage
+            } else {
+                1.0
+            };
+
             let flow_empty = if child.collapse {
                 if vertical {
                     node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
@@ -279,7 +294,7 @@ impl Node {
                 0.0
             };
 
-            (2.0 - flow_empty) * 0.5 * child.weight as f32 * weight_sum_inverse
+            (2.0 - flow_empty) * 0.5 * child.weight as f32 * weight_sum_inverse * scale_ratio
         }).fold(0.0, |a, b| a + b);
 
         // position of the left or bottom border of the first element
@@ -308,13 +323,20 @@ impl Node {
         let mut flow_current_border_position = flow_start_border_position;
         let num_children = children.len();
         let children: Vec<_> = children.into_iter().enumerate().map(|(child_num, (child, node))| {
-            // the percentage of the perpendicular dimension that is effectively filled with
-            // content
-            let effective_perp_percentage = 0.5 * (2.0 - if vertical {
-                node.empty_left + node.empty_right - child.padding_left - child.padding_right
+            // the ratio to multiply the scale of the node with
+            let scale_ratio = if let Some(req_perp) = required_effective_perp_percentage {
+                // the percentage of the perpendicular dimension that is effectively filled with
+                // content
+                let effective_perp_percentage = 0.5 * (2.0 - if vertical {
+                    node.empty_left + node.empty_right - child.padding_left - child.padding_right
+                } else {
+                    node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
+                });
+
+                req_perp / effective_perp_percentage
             } else {
-                node.empty_top + node.empty_bottom - child.padding_top - child.padding_bottom
-            });
+                1.0
+            };
 
             // matrix containing the transformation to adjust for the padding
             let inner_padding_matrix = {
@@ -366,16 +388,8 @@ impl Node {
             }
 
             // position of the center of this child in the flow
-            let flow_center_position = if let Some(req) = required_effective_perp_percentage {
-                let ratio = req / effective_perp_percentage;
-                let flow_center_position = flow_current_border_position + flow_percent * ratio;
-                flow_current_border_position += flow_percent * ratio * 2.0;
-                flow_center_position
-            } else {
-                let flow_center_position = flow_current_border_position + flow_percent;
-                flow_current_border_position += flow_percent * 2.0;
-                flow_center_position
-            };
+            let flow_center_position = flow_current_border_position + flow_percent * scale_ratio;
+            flow_current_border_position += flow_percent * scale_ratio * 2.0;
 
             // matrix containing the position of this child
             let position_matrix = if vertical {
@@ -385,19 +399,10 @@ impl Node {
             };
 
             // matrix containing the scale of this child
-            let scale_matrix = if let Some(req) = required_effective_perp_percentage {
-                let ratio = req / effective_perp_percentage;
-                if vertical {
-                    Matrix::scale_wh(ratio, ratio * child.weight as f32 * weight_sum_inverse)
-                } else {
-                    Matrix::scale_wh(ratio * child.weight as f32 * weight_sum_inverse, ratio)
-                }
+            let scale_matrix = if vertical {
+                Matrix::scale_wh(scale_ratio, scale_ratio * child.weight as f32 * weight_sum_inverse)
             } else {
-                if vertical {
-                    Matrix::scale_wh(1.0, child.weight as f32 * weight_sum_inverse)
-                } else {
-                    Matrix::scale_wh(child.weight as f32 * weight_sum_inverse, 1.0)
-                }
+                Matrix::scale_wh(scale_ratio * child.weight as f32 * weight_sum_inverse, scale_ratio)
             };
 
             // the total matrix for this child

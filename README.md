@@ -1,1 +1,1 @@
-## [Documentation](http://tomaka.github.io/eui/eui/index.html)
+# Dead library, don't use, will be destroyed in some time

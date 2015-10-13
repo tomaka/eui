@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Widget` trait in crate `eui`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Widget">
+
+    <title>eui::Widget - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>eui</a></p><script>window.sidebarCurrent = {name: 'Widget', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>eui</a>::<wbr><a class='trait' href=''>Widget</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-646' class='srclink' href='../src/eui/lib.rs.html#89-123' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Widget: <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html' title='core::marker::Sync'>Sync</a> + 'static {
+    fn <a href='#tymethod.build_layout' class='fnname'>build_layout</a>(&amp;self, height_per_width: <a href='https://doc.rust-lang.org/nightly/std/primitive.f32.html'>f32</a>, alignment: <a class='struct' href='../eui/struct.Alignment.html' title='eui::Alignment'>Alignment</a>) -&gt; <a class='enum' href='../eui/enum.Layout.html' title='eui::Layout'>Layout</a>;
+
+    fn <a href='#method.needs_rebuild' class='fnname'>needs_rebuild</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a> { ... }
+    fn <a href='#method.handle_event' class='fnname'>handle_event</a>(&amp;self, _event: &amp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/any/trait.Any.html' title='core::any::Any'>Any</a>, _source_child: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt;) -&gt; <a class='struct' href='../eui/struct.EventOutcome.html' title='eui::EventOutcome'>EventOutcome</a> { ... }
+}</pre><div class='docblock'><p>Implement this on types that contain the state of a widget.</p>
+</div>
+            <h2 id='required-methods'>Required Methods</h2>
+            <div class='methods'>
+        <h3 id='tymethod.build_layout' class='method stab '><code>fn <a href='#tymethod.build_layout' class='fnname'>build_layout</a>(&amp;self, height_per_width: <a href='https://doc.rust-lang.org/nightly/std/primitive.f32.html'>f32</a>, alignment: <a class='struct' href='../eui/struct.Alignment.html' title='eui::Alignment'>Alignment</a>) -&gt; <a class='enum' href='../eui/enum.Layout.html' title='eui::Layout'>Layout</a></code></h3><div class='docblock'><p>Returns a structure indicating the content of this widget.</p>
+
+<p>The <code>height_per_width</code> contains the ratio of the height of the widget divided by its width.
+The <code>alignment</code> is just an indication passed by the parent.</p>
+</div></div>
+            <h2 id='provided-methods'>Provided Methods</h2>
+            <div class='methods'>
+        <h3 id='method.needs_rebuild' class='method stab '><code>fn <a href='#method.needs_rebuild' class='fnname'>needs_rebuild</a>(&amp;self) -&gt; <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p>This method is called before drawing. It should return <code>true</code> if the layout of this element
+should be rebuilt.</p>
+
+<p>The default implementation just returns <code>false</code>.</p>
+
+<p>This method is useful when dealing with animation. As long as the widget&#39;s content is
+moving, you should return <code>true</code>.</p>
+</div><h3 id='method.handle_event' class='method stab '><code>fn <a href='#method.handle_event' class='fnname'>handle_event</a>(&amp;self, _event: &amp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/any/trait.Any.html' title='core::any::Any'>Any</a>, _source_child: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt;) -&gt; <a class='struct' href='../eui/struct.EventOutcome.html' title='eui::EventOutcome'>EventOutcome</a></code></h3><div class='docblock'><p>The widget received an event. It can update itself, then it should return an <code>EventOutcome</code>
+indicating the library what to do next. The default implementation returns
+<code>Default::default()</code>.</p>
+
+<p>The event can be:</p>
+
+<ul>
+<li><code>predefined::MouseEnterEvent</code></li>
+<li><code>predefined::MouseLeaveEvent</code></li>
+<li><code>predefined::MouseClick</code></li>
+<li>Any other event produced by another widget.</li>
+</ul>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.Empty.html' title='eui::predefined::Empty'>Empty</a></code></li>
+<li><code>impl <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.ImageButton.html' title='eui::predefined::ImageButton'>ImageButton</a></code></li>
+<li><code>impl <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.Image.html' title='eui::predefined::Image'>Image</a></code></li>
+<li><code>impl <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.Label.html' title='eui::predefined::Label'>Label</a></code></li>
+<li><code>impl <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.NineSliceImage.html' title='eui::predefined::NineSliceImage'>NineSliceImage</a></code></li>
+<li><code>impl&lt;W&gt; <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='../eui/predefined/struct.Transition.html' title='eui::predefined::Transition'>Transition</a>&lt;W&gt; <span class='where'>where W: <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a></span></code></li>
+<li><code>impl&lt;T&gt; <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a> for <a class='struct' href='https://doc.rust-lang.org/nightly/std/sync/mutex/struct.Mutex.html' title='std::sync::mutex::Mutex'>Mutex</a>&lt;T&gt; <span class='where'>where T: <a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a></span></code></li>
+</ul><script type="text/javascript" async
+                              src="../implementors/eui/trait.Widget.js">
+                      </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "eui";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

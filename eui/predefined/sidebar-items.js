@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Empty","An empty widget."],["Image",""],["ImageButton","An image that can be used as a button. Has a regular image and a hovered image."],["Label",""],["MouseClick",""],["MouseEnterEvent",""],["MouseLeaveEvent",""],["NineSliceImage",""],["Transition",""]]});

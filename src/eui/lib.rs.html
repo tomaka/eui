@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="Source to the Rust file `src/lib.rs`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang">
+
+    <title>lib.rs.html -- source</title>
+
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content source"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+</pre><pre class='rust '>
+<span class='doccomment'>//! # Tutorial</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ## Step 1: build a hierarchy of objects representing the state of the UI.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! Create a structure of objects that represent the state of the user interface. Use `Arc`</span>
+<span class='doccomment'>//! throughout the hierarchy.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ```ignore</span>
+<span class='doccomment'>//! let main_menu = MainMenuUiState {</span>
+<span class='doccomment'>//!     title: Arc::new(TextLabelUi { text: &quot;My awesome game!&quot; }),</span>
+<span class='doccomment'>//!     buttons: vec![</span>
+<span class='doccomment'>//!         Arc::new(ButtonState { title: &quot;Start&quot; }),</span>
+<span class='doccomment'>//!         Arc::new(ButtonState { title: &quot;Options&quot; }),</span>
+<span class='doccomment'>//!         Arc::new(ButtonState { title: &quot;Quit&quot; }),</span>
+<span class='doccomment'>//!     ]</span>
+<span class='doccomment'>//! }</span>
+<span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ## Step 2: implement the `Widget` trait on your ui elements.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! This trait implementation tells `eui` what the layout of your user interface is.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ```ignore</span>
+<span class='doccomment'>//! impl eui::Widget for MainMenuUiState {</span>
+<span class='doccomment'>//!     fn build_layout(&amp;self) -&gt; eui::Layout {</span>
+<span class='doccomment'>//!         let mut list = vec![self.title.clone()];</span>
+<span class='doccomment'>//!         for b in &amp;self.buttons { list.push(b.clone()); }</span>
+<span class='doccomment'>//!         eui::Layout::Vertical(list)</span>
+<span class='doccomment'>//!     }</span>
+<span class='doccomment'>//! }</span>
+<span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ## Step 3: create a `eui::Ui` object and pass your state to it.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! The `eui` library will build a secondary hierarchy that contains the positions, rotation and</span>
+<span class='doccomment'>//! scale of each component. This hierarchy is handled internally.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! At any moment you can call the `draw` method on your `Ui` to obtain a list of things to draw</span>
+<span class='doccomment'>//! when you render your user interface.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! You can still access and/or modify your state through the `widget()` method of the `Ui` object.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ## Step 4: send events to the `eui::Ui`</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! Whenever the mouse cursor is moved, a key is pressed, etc. you should call the appropriate</span>
+<span class='doccomment'>//! method on the `Ui` object to update it.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! These calls will be propagated to the methods of the `Widget` trait so that the state can</span>
+<span class='doccomment'>//! update itself.</span>
+<span class='doccomment'>//!</span>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>time</span>;
+
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>any</span>::<span class='ident'>Any</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>Arc</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>Mutex</span>;
+
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>matrix</span>::<span class='ident'>Matrix</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>shape</span>::<span class='ident'>Shape</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>ui</span>::<span class='ident'>Ui</span>;
+
+<span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>predefined</span>;
+
+<span class='kw'>mod</span> <span class='ident'>matrix</span>;
+<span class='kw'>mod</span> <span class='ident'>shape</span>;
+<span class='kw'>mod</span> <span class='ident'>ui</span>;
+
+<span class='doccomment'>/// Structure returned by `handle_event`, indicating information back to the library.</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>EventOutcome</span> {
+    <span class='doccomment'>/// If `true`, the element&#39;s layout will be refreshed before the next draw. Default is `false`.</span>
+    <span class='kw'>pub</span> <span class='ident'>refresh_layout</span>: <span class='ident'>bool</span>,
+    <span class='doccomment'>/// If `true`, the event will be sent to the parent element. Default is `true`.</span>
+    <span class='kw'>pub</span> <span class='ident'>propagate_to_parent</span>: <span class='ident'>bool</span>,
+    <span class='doccomment'>/// Events to propagate to the parent (in addition to the current event if</span>
+    <span class='doccomment'>/// `propagate_to_parent` is true).</span>
+    <span class='kw'>pub</span> <span class='ident'>events_for_parent</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Any</span><span class='op'>&gt;&gt;</span>,
+}
+
+<span class='kw'>impl</span> <span class='ident'>Default</span> <span class='kw'>for</span> <span class='ident'>EventOutcome</span> {
+    <span class='kw'>fn</span> <span class='ident'>default</span>() <span class='op'>-&gt;</span> <span class='ident'>EventOutcome</span> {
+        <span class='ident'>EventOutcome</span> {
+            <span class='ident'>refresh_layout</span>: <span class='boolval'>false</span>,
+            <span class='ident'>propagate_to_parent</span>: <span class='boolval'>true</span>,
+            <span class='ident'>events_for_parent</span>: <span class='ident'>Vec</span>::<span class='ident'>new</span>(),
+        }
+    }
+}
+
+<span class='doccomment'>/// Implement this on types that contain the state of a widget.</span>
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Widget</span>: <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Sync</span> <span class='op'>+</span> <span class='lifetime'>&#39;static</span> {
+    <span class='doccomment'>/// Returns a structure indicating the content of this widget.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// The `height_per_width` contains the ratio of the height of the widget divided by its width.</span>
+    <span class='doccomment'>/// The `alignment` is just an indication passed by the parent.</span>
+    <span class='kw'>fn</span> <span class='ident'>build_layout</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>height_per_width</span>: <span class='ident'>f32</span>, <span class='ident'>alignment</span>: <span class='ident'>Alignment</span>) <span class='op'>-&gt;</span> <span class='ident'>Layout</span>;
+
+    <span class='doccomment'>/// This method is called before drawing. It should return `true` if the layout of this element</span>
+    <span class='doccomment'>/// should be rebuilt.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// The default implementation just returns `false`.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// This method is useful when dealing with animation. As long as the widget&#39;s content is</span>
+    <span class='doccomment'>/// moving, you should return `true`.</span>
+    <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>needs_rebuild</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
+        <span class='boolval'>false</span>
+    }
+
+    <span class='doccomment'>/// The widget received an event. It can update itself, then it should return an `EventOutcome`</span>
+    <span class='doccomment'>/// indicating the library what to do next. The default implementation returns</span>
+    <span class='doccomment'>/// `Default::default()`.</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// The event can be:</span>
+    <span class='doccomment'>///</span>
+    <span class='doccomment'>/// * `predefined::MouseEnterEvent`</span>
+    <span class='doccomment'>/// * `predefined::MouseLeaveEvent`</span>
+    <span class='doccomment'>/// * `predefined::MouseClick`</span>
+    <span class='doccomment'>/// * Any other event produced by another widget.</span>
+    <span class='doccomment'>///</span>
+    <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>handle_event</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>_event</span>: <span class='kw-2'>&amp;</span><span class='ident'>Any</span>, <span class='ident'>_source_child</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>EventOutcome</span> {
+        <span class='ident'>Default</span>::<span class='ident'>default</span>()
+    }
+}
+
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> <span class='ident'>Widget</span> <span class='kw'>for</span> <span class='ident'>Mutex</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> <span class='kw'>where</span> <span class='ident'>T</span>: <span class='ident'>Widget</span> {
+    <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>build_layout</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>height_per_width</span>: <span class='ident'>f32</span>, <span class='ident'>alignment</span>: <span class='ident'>Alignment</span>) <span class='op'>-&gt;</span> <span class='ident'>Layout</span> {
+        <span class='self'>self</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>().<span class='ident'>build_layout</span>(<span class='ident'>height_per_width</span>, <span class='ident'>alignment</span>)
+    }
+
+    <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>needs_rebuild</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
+        <span class='self'>self</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>().<span class='ident'>needs_rebuild</span>()
+    }
+
+    <span class='attribute'>#[<span class='ident'>inline</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>handle_event</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>event</span>: <span class='kw-2'>&amp;</span><span class='ident'>Any</span>, <span class='ident'>child</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>EventOutcome</span> {
+        <span class='self'>self</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>().<span class='ident'>handle_event</span>(<span class='ident'>event</span>, <span class='ident'>child</span>)
+    }
+}
+
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Copy</span>, <span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>Default</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Alignment</span> {
+    <span class='kw'>pub</span> <span class='ident'>horizontal</span>: <span class='ident'>HorizontalAlignment</span>,
+    <span class='kw'>pub</span> <span class='ident'>vertical</span>: <span class='ident'>VerticalAlignment</span>,
+}
+
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Copy</span>, <span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>HorizontalAlignment</span> {
+    <span class='ident'>Center</span>,
+    <span class='ident'>Left</span>,
+    <span class='ident'>Right</span>,
+}
+
+<span class='kw'>impl</span> <span class='ident'>Default</span> <span class='kw'>for</span> <span class='ident'>HorizontalAlignment</span> {
+    <span class='kw'>fn</span> <span class='ident'>default</span>() <span class='op'>-&gt;</span> <span class='ident'>HorizontalAlignment</span> {
+        <span class='ident'>HorizontalAlignment</span>::<span class='ident'>Center</span>
+    }
+}
+
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Copy</span>, <span class='ident'>Clone</span>, <span class='ident'>Debug</span>, <span class='ident'>PartialEq</span>, <span class='ident'>Eq</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>VerticalAlignment</span> {
+    <span class='ident'>Center</span>,
+    <span class='ident'>Top</span>,
+    <span class='ident'>Bottom</span>,
+}
+
+<span class='kw'>impl</span> <span class='ident'>Default</span> <span class='kw'>for</span> <span class='ident'>VerticalAlignment</span> {
+    <span class='kw'>fn</span> <span class='ident'>default</span>() <span class='op'>-&gt;</span> <span class='ident'>VerticalAlignment</span> {
+        <span class='ident'>VerticalAlignment</span>::<span class='ident'>Center</span>
+    }
+}
+
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>Layout</span> {
+    <span class='ident'>AbsolutePositionned</span>(<span class='ident'>Vec</span><span class='op'>&lt;</span>(<span class='ident'>Matrix</span>, <span class='ident'>Arc</span><span class='op'>&lt;</span><span class='ident'>Widget</span><span class='op'>&gt;</span>)<span class='op'>&gt;</span>),
+    <span class='doccomment'>/// The content of the widget will be split in parts whose size depend on the weight of each</span>
+    <span class='doccomment'>/// child. Then the widgets are moved so that the white spaces at the left and right of each</span>
+    <span class='doccomment'>/// child whose `collapse` value is `true` are merged with the neighbouring widgets. The</span>
+    <span class='doccomment'>/// `alignment` is taken into account in order to align the elements once the children have</span>
+    <span class='doccomment'>/// been collapsed.</span>
+    <span class='ident'>HorizontalBar</span> {
+        <span class='doccomment'>/// How the children should be aligned once white spaces have been collapsed.</span>
+        <span class='ident'>alignment</span>: <span class='ident'>HorizontalAlignment</span>,
+        <span class='doccomment'>/// List of children.</span>
+        <span class='ident'>children</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Child</span><span class='op'>&gt;</span>,
+        <span class='ident'>vertical_align</span>: <span class='ident'>bool</span>,
+    },
+    <span class='doccomment'>/// The same as `HorizontalBar`, but vertical.</span>
+    <span class='ident'>VerticalBar</span> {
+        <span class='doccomment'>/// How the children should be aligned once white spaces have been collapsed.</span>
+        <span class='ident'>alignment</span>: <span class='ident'>VerticalAlignment</span>,
+        <span class='doccomment'>/// List of children.</span>
+        <span class='ident'>children</span>: <span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Child</span><span class='op'>&gt;</span>,
+        <span class='ident'>horizontal_align</span>: <span class='ident'>bool</span>,
+    },
+    <span class='ident'>Shapes</span>(<span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Shape</span><span class='op'>&gt;</span>),
+}
+
+<span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Child</span> {
+    <span class='kw'>pub</span> <span class='ident'>child</span>: <span class='ident'>Arc</span><span class='op'>&lt;</span><span class='ident'>Widget</span><span class='op'>&gt;</span>,
+    <span class='kw'>pub</span> <span class='ident'>weight</span>: <span class='ident'>i8</span>,
+    <span class='kw'>pub</span> <span class='ident'>alignment</span>: <span class='ident'>Alignment</span>,
+    <span class='kw'>pub</span> <span class='ident'>collapse</span>: <span class='ident'>bool</span>,
+    <span class='kw'>pub</span> <span class='ident'>padding_top</span>: <span class='ident'>f32</span>,
+    <span class='kw'>pub</span> <span class='ident'>padding_right</span>: <span class='ident'>f32</span>,
+    <span class='kw'>pub</span> <span class='ident'>padding_bottom</span>: <span class='ident'>f32</span>,
+    <span class='kw'>pub</span> <span class='ident'>padding_left</span>: <span class='ident'>f32</span>,
+}
+</pre>
+</section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "eui";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script async src="../../search-index.js"></script>
+</body>
+</html>

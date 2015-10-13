@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `eui` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, eui">
+
+    <title>eui - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'eui', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>eui</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-0' class='srclink' href='../src/eui/lib.rs.html#1-208' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'>
+<h1 id='tutorial' class='section-header'><a href='#tutorial'>Tutorial</a></h1>
+<h2 id='step-1-build-a-hierarchy-of-objects-representing-the-state-of-the-ui' class='section-header'><a href='#step-1-build-a-hierarchy-of-objects-representing-the-state-of-the-ui'>Step 1: build a hierarchy of objects representing the state of the UI.</a></h2>
+<p>Create a structure of objects that represent the state of the user interface. Use <code>Arc</code>
+throughout the hierarchy.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>let</span> <span class='ident'>main_menu</span> <span class='op'>=</span> <span class='ident'>MainMenuUiState</span> {
+    <span class='ident'>title</span>: <span class='ident'>Arc</span>::<span class='ident'>new</span>(<span class='ident'>TextLabelUi</span> { <span class='ident'>text</span>: <span class='string'>&quot;My awesome game!&quot;</span> }),
+    <span class='ident'>buttons</span>: <span class='macro'>vec</span><span class='macro'>!</span>[
+        <span class='ident'>Arc</span>::<span class='ident'>new</span>(<span class='ident'>ButtonState</span> { <span class='ident'>title</span>: <span class='string'>&quot;Start&quot;</span> }),
+        <span class='ident'>Arc</span>::<span class='ident'>new</span>(<span class='ident'>ButtonState</span> { <span class='ident'>title</span>: <span class='string'>&quot;Options&quot;</span> }),
+        <span class='ident'>Arc</span>::<span class='ident'>new</span>(<span class='ident'>ButtonState</span> { <span class='ident'>title</span>: <span class='string'>&quot;Quit&quot;</span> }),
+    ]
+}</pre>
+
+<h2 id='step-2-implement-the-widget-trait-on-your-ui-elements' class='section-header'><a href='#step-2-implement-the-widget-trait-on-your-ui-elements'>Step 2: implement the <code>Widget</code> trait on your ui elements.</a></h2>
+<p>This trait implementation tells <code>eui</code> what the layout of your user interface is.</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>impl</span> <span class='ident'>eui</span>::<span class='ident'>Widget</span> <span class='kw'>for</span> <span class='ident'>MainMenuUiState</span> {
+    <span class='kw'>fn</span> <span class='ident'>build_layout</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>eui</span>::<span class='ident'>Layout</span> {
+        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>list</span> <span class='op'>=</span> <span class='macro'>vec</span><span class='macro'>!</span>[<span class='self'>self</span>.<span class='ident'>title</span>.<span class='ident'>clone</span>()];
+        <span class='kw'>for</span> <span class='ident'>b</span> <span class='kw'>in</span> <span class='kw-2'>&amp;</span><span class='self'>self</span>.<span class='ident'>buttons</span> { <span class='ident'>list</span>.<span class='ident'>push</span>(<span class='ident'>b</span>.<span class='ident'>clone</span>()); }
+        <span class='ident'>eui</span>::<span class='ident'>Layout</span>::<span class='ident'>Vertical</span>(<span class='ident'>list</span>)
+    }
+}</pre>
+
+<h2 id='step-3-create-a-euiui-object-and-pass-your-state-to-it' class='section-header'><a href='#step-3-create-a-euiui-object-and-pass-your-state-to-it'>Step 3: create a <code>eui::Ui</code> object and pass your state to it.</a></h2>
+<p>The <code>eui</code> library will build a secondary hierarchy that contains the positions, rotation and
+scale of each component. This hierarchy is handled internally.</p>
+
+<p>At any moment you can call the <code>draw</code> method on your <code>Ui</code> to obtain a list of things to draw
+when you render your user interface.</p>
+
+<p>You can still access and/or modify your state through the <code>widget()</code> method of the <code>Ui</code> object.</p>
+
+<h2 id='step-4-send-events-to-the-euiui' class='section-header'><a href='#step-4-send-events-to-the-euiui'>Step 4: send events to the <code>eui::Ui</code></a></h2>
+<p>Whenever the mouse cursor is moved, a key is pressed, etc. you should call the appropriate
+method on the <code>Ui</code> object to update it.</p>
+
+<p>These calls will be propagated to the methods of the <code>Widget</code> trait so that the state can
+update itself.</p>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='predefined/index.html'
+                               title='eui::predefined'>predefined</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                </table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Alignment.html'
+                               title='eui::Alignment'>Alignment</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Child.html'
+                               title='eui::Child'>Child</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.EventOutcome.html'
+                               title='eui::EventOutcome'>EventOutcome</a></td>
+                        <td class='docblock short'>
+                             <p>Structure returned by <code>handle_event</code>, indicating information back to the library.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Matrix.html'
+                               title='eui::Matrix'>Matrix</a></td>
+                        <td class='docblock short'>
+                             <p>A 3x3 matrix. The data is stored in column-major.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Ui.html'
+                               title='eui::Ui'>Ui</a></td>
+                        <td class='docblock short'>
+                             <p>Main struct of this library. Handles the UI as a whole.</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.HorizontalAlignment.html'
+                               title='eui::HorizontalAlignment'>HorizontalAlignment</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Layout.html'
+                               title='eui::Layout'>Layout</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Shape.html'
+                               title='eui::Shape'>Shape</a></td>
+                        <td class='docblock short'>
+                             <p>A shape that can be drawn by any of the UI&#39;s components.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.VerticalAlignment.html'
+                               title='eui::VerticalAlignment'>VerticalAlignment</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Widget.html'
+                               title='eui::Widget'>Widget</a></td>
+                        <td class='docblock short'>
+                             <p>Implement this on types that contain the state of a widget.</p>
+
+                        </td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "eui";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

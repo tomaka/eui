@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Layout` enum in crate `eui`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Layout">
+
+    <title>eui::Layout - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>eui</a></p><script>window.sidebarCurrent = {name: 'Layout', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content enum">
+<h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>eui</a>::<wbr><a class='enum' href=''>Layout</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-762' class='srclink' href='../src/eui/lib.rs.html#174-197' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum Layout {
+    AbsolutePositionned(<a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='struct' href='../eui/struct.Matrix.html' title='eui::Matrix'>Matrix</a>, <a class='struct' href='https://doc.rust-lang.org/nightly/alloc/arc/struct.Arc.html' title='alloc::arc::Arc'>Arc</a>&lt;<a class='trait' href='../eui/trait.Widget.html' title='eui::Widget'>Widget</a>&gt;)</a>&gt;),
+    HorizontalBar {
+        alignment: <a class='enum' href='../eui/enum.HorizontalAlignment.html' title='eui::HorizontalAlignment'>HorizontalAlignment</a>,
+        children: <a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='../eui/struct.Child.html' title='eui::Child'>Child</a>&gt;,
+        vertical_align: <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>,
+    },
+    VerticalBar {
+        alignment: <a class='enum' href='../eui/enum.VerticalAlignment.html' title='eui::VerticalAlignment'>VerticalAlignment</a>,
+        children: <a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='../eui/struct.Child.html' title='eui::Child'>Child</a>&gt;,
+        horizontal_align: <a href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a>,
+    },
+    Shapes(<a class='struct' href='https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='enum' href='../eui/enum.Shape.html' title='eui::Shape'>Shape</a>&gt;),
+}</pre><h2 class='variants'>Variants</h2>
+<table><tr><td id='variant.AbsolutePositionned'><code>AbsolutePositionned</code></td><td></td></tr><tr><td id='variant.HorizontalBar'><code>HorizontalBar</code></td><td><div class='docblock'><p>The content of the widget will be split in parts whose size depend on the weight of each
+child. Then the widgets are moved so that the white spaces at the left and right of each
+child whose <code>collapse</code> value is <code>true</code> are merged with the neighbouring widgets. The
+<code>alignment</code> is taken into account in order to align the elements once the children have
+been collapsed.</p>
+</div><h3 class='fields'>Fields</h3>
+
+                                              <table><tr><td id='variant.HorizontalBar.field.alignment'><code>alignment</code></td><td><div class='docblock'><p>How the children should be aligned once white spaces have been collapsed.</p>
+</div></td></tr><tr><td id='variant.HorizontalBar.field.children'><code>children</code></td><td><div class='docblock'><p>List of children.</p>
+</div></td></tr><tr><td id='variant.HorizontalBar.field.vertical_align'><code>vertical_align</code></td><td></td></tr></table></td></tr><tr><td id='variant.VerticalBar'><code>VerticalBar</code></td><td><div class='docblock'><p>The same as <code>HorizontalBar</code>, but vertical.</p>
+</div><h3 class='fields'>Fields</h3>
+
+                                              <table><tr><td id='variant.VerticalBar.field.alignment'><code>alignment</code></td><td><div class='docblock'><p>How the children should be aligned once white spaces have been collapsed.</p>
+</div></td></tr><tr><td id='variant.VerticalBar.field.children'><code>children</code></td><td><div class='docblock'><p>List of children.</p>
+</div></td></tr><tr><td id='variant.VerticalBar.field.horizontal_align'><code>horizontal_align</code></td><td></td></tr></table></td></tr><tr><td id='variant.Shapes'><code>Shapes</code></td><td></td></tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "eui";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

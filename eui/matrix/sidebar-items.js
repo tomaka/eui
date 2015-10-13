@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Matrix","A 3x3 matrix. The data is stored in column-major."]]});

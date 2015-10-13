@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ImageButton","An image that can be used as a button. Has a regular image and a hovered image."]]});

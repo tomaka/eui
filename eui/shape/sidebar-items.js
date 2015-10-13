@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Shape","A shape that can be drawn by any of the UI's components."]]});
